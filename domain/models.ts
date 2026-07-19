@@ -4,6 +4,61 @@ export type EventStatus = "DRAFT" | "OPEN" | "CLOSED" | "RESOLVED" | "CANCELLED"
 export type BetStatus = "ACCEPTED" | "WON" | "LOST" | "REFUNDED";
 export type BonusKind = "LIRA" | "FREE_BET" | "MULTIPLIER" | "CASHBACK" | "NONE";
 export type BonusStatus = "AVAILABLE" | "RESERVED" | "USED" | "EXPIRED";
+export type DuelGame = "HIGH_CARD" | "DICE" | "SLOTS";
+export type DuelStatus = "PENDING" | "RESOLVED" | "DECLINED" | "CANCELLED" | "EXPIRED";
+
+export interface PlayingCard {
+  rank: number;
+  suit: "HEARTS" | "DIAMONDS" | "CLUBS" | "SPADES";
+}
+
+export interface HighCardDuelResult {
+  game: "HIGH_CARD";
+  challengerCard: PlayingCard;
+  opponentCard: PlayingCard;
+  redraws: number;
+}
+
+export interface DiceDuelResult {
+  game: "DICE";
+  challengerDice: [number, number];
+  opponentDice: [number, number];
+  redraws: number;
+}
+
+export type SlotSymbol = "LEMON" | "GLASS" | "HEART" | "RING" | "CROWN" | "BOUQUET";
+
+export interface SlotDuelResult {
+  game: "SLOTS";
+  challengerSlots: [SlotSymbol, SlotSymbol, SlotSymbol];
+  opponentSlots: [SlotSymbol, SlotSymbol, SlotSymbol];
+  challengerCombination: "THREE" | "PAIR" | "HIGH";
+  opponentCombination: "THREE" | "PAIR" | "HIGH";
+  redraws: number;
+}
+
+export type DuelResult = HighCardDuelResult | DiceDuelResult | SlotDuelResult;
+
+export interface Duel {
+  id: string;
+  game: DuelGame;
+  status: DuelStatus;
+  challengerId: string;
+  opponentId: string;
+  stake: number;
+  pot: number;
+  winnerId?: string;
+  result?: DuelResult;
+  createIdempotencyKey: string;
+  acceptIdempotencyKey?: string;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt?: string;
+  resolvedAt?: string;
+  declinedAt?: string;
+  cancelledAt?: string;
+  expiredAt?: string;
+}
 
 export interface User {
   id: string;
@@ -66,6 +121,9 @@ export type TransactionType =
   | "REFUND"
   | "BONUS"
   | "CASHBACK"
+  | "DUEL_STAKE"
+  | "DUEL_WIN"
+  | "DUEL_REFUND"
   | "ADMIN_ADJUSTMENT";
 
 export interface WalletTransaction {

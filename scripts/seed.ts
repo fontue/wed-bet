@@ -7,4 +7,4 @@ if (process.env.NODE_ENV === "production") {
 console.log("Демонстрационные данные готовы:");
 console.table(seedUsers.map((user) => ({ name: user.displayName, role: user.role, loginCode: user.loginCode, balance: user.balance })));
 console.log(`Событий: ${seedEvents.length}`);
-console.log("Одноразовые dev-токены: guest-demo, admin-demo");
+console.log("Dev-токены: guest-demo, misha-demo, admin-demo");

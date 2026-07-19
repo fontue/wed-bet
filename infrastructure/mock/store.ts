@@ -1,9 +1,12 @@
 import { createHash, randomInt, randomUUID } from "node:crypto";
 import { seedBets, seedBonusDefinitions, seedEvents, seedNews, seedTransactions, seedUsers } from "@/data/seed";
 import { marketView, quoteBet, totalPool } from "@/domain/market";
+import { DUEL_GAME_META, DUEL_POT, DUEL_STAKE, DUEL_TTL_MS, generateDuelResult } from "@/domain/duels";
 import type {
   Bet,
   BonusSpin,
+  Duel,
+  DuelGame,
   LoginToken,
   MarketEvent,
   Session,
@@ -25,10 +28,13 @@ interface MockState {
   userBonuses: UserBonus[];
   spins: BonusSpin[];
   news: typeof seedNews;
+  duels: Duel[];
   loginTokens: LoginToken[];
   sessions: Session[];
   betRequests: Map<string, string>;
   spinRequests: Map<string, string>;
+  duelCreateRequests: Map<string, string>;
+  duelActionRequests: Map<string, string>;
 }
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -48,19 +54,27 @@ function initialState(): MockState {
     ],
     spins: [],
     news: clone(seedNews),
+    duels: [],
     loginTokens: process.env.NODE_ENV === "production" ? [] : [
       { id: "lt-guest", userId: "u-sofia", tokenHash: hash("guest-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
+      { id: "lt-misha", userId: "u-misha", tokenHash: hash("misha-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
       { id: "lt-admin", userId: "u-admin", tokenHash: hash("admin-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
     ],
     sessions: [],
     betRequests: new Map(),
     spinRequests: new Map(),
+    duelCreateRequests: new Map(),
+    duelActionRequests: new Map(),
   };
 }
 
 const globalStore = globalThis as typeof globalThis & { __wedBetMockStore?: MockState };
 export const store = globalStore.__wedBetMockStore ?? initialState();
 if (process.env.NODE_ENV !== "production") globalStore.__wedBetMockStore = store;
+// Keep development hot reload compatible when the in-memory schema gains fields.
+store.duels ??= [];
+store.duelCreateRequests ??= new Map();
+store.duelActionRequests ??= new Map();
 
 export function listEvents(): MarketEvent[] {
   return clone(store.events);
@@ -102,6 +116,168 @@ export function listUsers(): User[] {
   return clone(store.users);
 }
 
+function duelReason(duel: Duel): string {
+  return `Дуэль: ${DUEL_GAME_META[duel.game].title}`;
+}
+
+function refundPendingDuel(duel: Duel, status: "DECLINED" | "CANCELLED" | "EXPIRED", at: string): void {
+  if (duel.status !== "PENDING") return;
+  const challenger = store.users.find((user) => user.id === duel.challengerId);
+  if (!challenger) throw new Error("USER_NOT_FOUND");
+  challenger.balance += duel.stake;
+  store.transactions.push({
+    id: randomUUID(), userId: challenger.id, amount: duel.stake, type: "DUEL_REFUND",
+    reason: `${duelReason(duel)} · возврат`, balanceAfter: challenger.balance,
+    operationKey: `duel:${duel.id}:refund`, createdAt: at,
+  });
+  duel.status = status;
+  if (status === "DECLINED") duel.declinedAt = at;
+  if (status === "CANCELLED") duel.cancelledAt = at;
+  if (status === "EXPIRED") duel.expiredAt = at;
+}
+
+function expirePendingDuels(): void {
+  const now = Date.now();
+  const at = new Date(now).toISOString();
+  for (const duel of store.duels) {
+    if (duel.status === "PENDING" && new Date(duel.expiresAt).getTime() <= now) refundPendingDuel(duel, "EXPIRED", at);
+  }
+}
+
+export function getDuelById(id: string): Duel | undefined {
+  expirePendingDuels();
+  const duel = store.duels.find((item) => item.id === id);
+  return duel ? clone(duel) : undefined;
+}
+
+export function listEligibleDuelOpponents(userId: string): User[] {
+  return clone(store.users.filter((user) => user.id !== userId && user.role === "USER" && user.status === "ACTIVE").sort((a, b) => a.displayName.localeCompare(b.displayName, "ru")));
+}
+
+export function getDuelState(userId: string) {
+  expirePendingDuels();
+  const involved = store.duels.filter((duel) => duel.challengerId === userId || duel.opponentId === userId);
+  const resolved = involved.filter((duel) => duel.status === "RESOLVED");
+  const duelTransactions = store.transactions.filter((transaction) => transaction.userId === userId && ["DUEL_STAKE", "DUEL_WIN", "DUEL_REFUND"].includes(transaction.type));
+  return {
+    incoming: clone(involved.filter((duel) => duel.status === "PENDING" && duel.opponentId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+    outgoing: clone(involved.filter((duel) => duel.status === "PENDING" && duel.challengerId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+    recent: clone(involved.filter((duel) => duel.status !== "PENDING").sort((a, b) => (b.resolvedAt ?? b.createdAt).localeCompare(a.resolvedAt ?? a.createdAt)).slice(0, 20)),
+    opponents: listEligibleDuelOpponents(userId),
+    users: clone(store.users.filter((user) => involved.some((duel) => duel.challengerId === user.id || duel.opponentId === user.id) || user.id === userId)),
+    stats: {
+      played: resolved.length,
+      wins: resolved.filter((duel) => duel.winnerId === userId).length,
+      losses: resolved.filter((duel) => duel.winnerId !== userId).length,
+      profit: duelTransactions.reduce((sum, transaction) => sum + transaction.amount, 0),
+    },
+    balance: getUser(userId)?.balance ?? 0,
+    serverTime: Date.now(),
+  };
+}
+
+export function createDuel(input: { challengerId: string; opponentId: string; game: DuelGame; idempotencyKey: string }): { duel: Duel; balance: number } {
+  expirePendingDuels();
+  const existingId = store.duelCreateRequests.get(input.idempotencyKey);
+  if (existingId) {
+    const existing = store.duels.find((duel) => duel.id === existingId);
+    if (!existing || existing.challengerId !== input.challengerId) throw new Error("IDEMPOTENCY_CONFLICT");
+    return { duel: clone(existing), balance: getUser(input.challengerId)!.balance };
+  }
+  const challenger = store.users.find((user) => user.id === input.challengerId);
+  const opponent = store.users.find((user) => user.id === input.opponentId);
+  if (!challenger || challenger.role !== "USER" || challenger.status !== "ACTIVE") throw new Error("USER_UNAVAILABLE");
+  if (!opponent || opponent.role !== "USER" || opponent.status !== "ACTIVE" || opponent.id === challenger.id) throw new Error("OPPONENT_UNAVAILABLE");
+  if (!(["HIGH_CARD", "DICE", "SLOTS"] as DuelGame[]).includes(input.game)) throw new Error("INVALID_DUEL_GAME");
+  if (challenger.balance < DUEL_STAKE) throw new Error("INSUFFICIENT_BALANCE");
+  if (store.duels.filter((duel) => duel.challengerId === challenger.id && duel.status === "PENDING").length >= 3) throw new Error("TOO_MANY_OUTGOING_DUELS");
+  if (store.duels.some((duel) => duel.status === "PENDING" && [duel.challengerId, duel.opponentId].includes(challenger.id) && [duel.challengerId, duel.opponentId].includes(opponent.id))) throw new Error("PAIR_DUEL_EXISTS");
+
+  const createdAt = new Date().toISOString();
+  const duel: Duel = {
+    id: randomUUID(), game: input.game, status: "PENDING", challengerId: challenger.id, opponentId: opponent.id,
+    stake: DUEL_STAKE, pot: DUEL_POT, createIdempotencyKey: input.idempotencyKey, createdAt,
+    expiresAt: new Date(Date.now() + DUEL_TTL_MS).toISOString(),
+  };
+  challenger.balance -= DUEL_STAKE;
+  store.transactions.push({
+    id: randomUUID(), userId: challenger.id, amount: -DUEL_STAKE, type: "DUEL_STAKE", reason: duelReason(duel),
+    balanceAfter: challenger.balance, operationKey: `duel:${duel.id}:challenger-stake`, createdAt,
+  });
+  store.duels.push(duel);
+  store.duelCreateRequests.set(input.idempotencyKey, duel.id);
+  return { duel: clone(duel), balance: challenger.balance };
+}
+
+export function acceptDuel(input: { duelId: string; opponentId: string; idempotencyKey: string }): { duel: Duel; balance: number } {
+  expirePendingDuels();
+  const duel = store.duels.find((item) => item.id === input.duelId);
+  if (!duel || duel.opponentId !== input.opponentId) throw new Error("DUEL_NOT_FOUND");
+  if (duel.status === "RESOLVED") return { duel: clone(duel), balance: getUser(input.opponentId)!.balance };
+  const requestKey = `${input.opponentId}:accept:${input.idempotencyKey}`;
+  const previousId = store.duelActionRequests.get(requestKey);
+  if (previousId) {
+    const previous = store.duels.find((item) => item.id === previousId)!;
+    return { duel: clone(previous), balance: getUser(input.opponentId)!.balance };
+  }
+  if (duel.status !== "PENDING") throw new Error("DUEL_NOT_PENDING");
+  const opponent = store.users.find((user) => user.id === input.opponentId && user.role === "USER" && user.status === "ACTIVE");
+  if (!opponent) throw new Error("USER_UNAVAILABLE");
+  if (opponent.balance < duel.stake) throw new Error("INSUFFICIENT_BALANCE");
+
+  const acceptedAt = new Date().toISOString();
+  const generated = generateDuelResult(duel.game, (maxExclusive) => randomInt(maxExclusive));
+  const winnerId = generated.winner === "CHALLENGER" ? duel.challengerId : duel.opponentId;
+  const winner = store.users.find((user) => user.id === winnerId)!;
+  opponent.balance -= duel.stake;
+  store.transactions.push({
+    id: randomUUID(), userId: opponent.id, amount: -duel.stake, type: "DUEL_STAKE", reason: duelReason(duel),
+    balanceAfter: opponent.balance, operationKey: `duel:${duel.id}:opponent-stake`, createdAt: acceptedAt,
+  });
+  winner.balance += duel.pot;
+  store.transactions.push({
+    id: randomUUID(), userId: winner.id, amount: duel.pot, type: "DUEL_WIN", reason: `${duelReason(duel)} · победа`,
+    balanceAfter: winner.balance, operationKey: `duel:${duel.id}:win`, createdAt: acceptedAt,
+  });
+  duel.status = "RESOLVED";
+  duel.acceptIdempotencyKey = input.idempotencyKey;
+  duel.acceptedAt = acceptedAt;
+  duel.resolvedAt = acceptedAt;
+  duel.result = generated.result;
+  duel.winnerId = winnerId;
+  store.duelActionRequests.set(requestKey, duel.id);
+  return { duel: clone(duel), balance: opponent.balance };
+}
+
+export function declineDuel(input: { duelId: string; opponentId: string; idempotencyKey: string }): Duel {
+  expirePendingDuels();
+  const duel = store.duels.find((item) => item.id === input.duelId && item.opponentId === input.opponentId);
+  if (!duel) throw new Error("DUEL_NOT_FOUND");
+  const requestKey = `${input.opponentId}:decline:${input.idempotencyKey}`;
+  if (store.duelActionRequests.has(requestKey)) return clone(duel);
+  if (duel.status !== "PENDING") throw new Error("DUEL_NOT_PENDING");
+  refundPendingDuel(duel, "DECLINED", new Date().toISOString());
+  store.duelActionRequests.set(requestKey, duel.id);
+  return clone(duel);
+}
+
+export function cancelDuel(input: { duelId: string; actorId: string; idempotencyKey: string; admin?: boolean }): Duel {
+  expirePendingDuels();
+  const duel = store.duels.find((item) => item.id === input.duelId);
+  if (!duel || (!input.admin && duel.challengerId !== input.actorId)) throw new Error("DUEL_NOT_FOUND");
+  const requestKey = `${input.actorId}:cancel:${input.idempotencyKey}`;
+  if (store.duelActionRequests.has(requestKey)) return clone(duel);
+  if (duel.status !== "PENDING") throw new Error("DUEL_NOT_PENDING");
+  refundPendingDuel(duel, "CANCELLED", new Date().toISOString());
+  store.duelActionRequests.set(requestKey, duel.id);
+  return clone(duel);
+}
+
+export function listAllDuels(): Duel[] {
+  expirePendingDuels();
+  return clone([...store.duels].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+}
+
 export function getUser(id: string): User | undefined {
   const user = store.users.find((item) => item.id === id);
   return user ? clone(user) : undefined;
@@ -129,7 +305,7 @@ export function exchangeLoginToken(rawToken: string): { session: Session; user: 
 /** Reusable convenience login for local development only. Never called in production. */
 export function createDevelopmentSession(rawToken: string): { session: Session; user: User } {
   if (process.env.NODE_ENV === "production") throw new Error("DEMO_LOGIN_DISABLED");
-  const userId = rawToken === "guest-demo" ? "u-sofia" : rawToken === "admin-demo" ? "u-admin" : undefined;
+  const userId = rawToken === "guest-demo" ? "u-sofia" : rawToken === "misha-demo" ? "u-misha" : rawToken === "admin-demo" ? "u-admin" : undefined;
   if (!userId) throw new Error("INVALID_TOKEN");
   const user = store.users.find((item) => item.id === userId && item.status === "ACTIVE");
   if (!user) throw new Error("ACCOUNT_BLOCKED");

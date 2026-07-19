@@ -1,18 +1,20 @@
 import Link from "next/link";
 import type { User } from "@/domain/models";
-import { formatLira } from "@/domain/market";
 import { Logo } from "./logo";
 import { PwaProvider } from "./pwa-provider";
+import { LeaderboardPopup } from "./leaderboard-popup";
+import { BalanceBadge } from "./balance-badge";
 
 const nav = [
   { href: "/", label: "События", icon: "⌂" },
   { href: "/bets", label: "Ставки", icon: "◫" },
   { href: "/bonuses", label: "Бонусы", icon: "✦" },
-  { href: "/leaderboard", label: "Лидеры", icon: "♛" },
+  { href: "/duels", label: "Дуэли", icon: "⚔" },
   { href: "/profile", label: "Профиль", icon: "●" },
 ];
 
-export function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
+type Leader = User & { profit: number; wins: number };
+export function AppShell({ user, leaders, children }: { user: User; leaders: Leader[]; children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       <PwaProvider />
@@ -21,7 +23,8 @@ export function AppShell({ user, children }: { user: User; children: React.React
           <Logo />
           <div className="flex items-center gap-2">
             {user.role === "ADMIN" && <Link href="/admin" className="hidden rounded-full border border-[#174b38]/15 px-3 py-2 text-xs font-bold text-[#174b38] sm:block">Админка</Link>}
-            <Link href="/profile" className="rounded-full bg-white px-3.5 py-2 text-sm font-extrabold text-[#174b38] shadow-sm"><span className="mr-1.5 text-[#c89537]">₤</span>{formatLira(user.balance).replace(" ₤", "")}</Link>
+            <LeaderboardPopup leaders={leaders} />
+            <BalanceBadge initialBalance={user.balance} />
           </div>
         </div>
       </header>

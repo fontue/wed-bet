@@ -35,6 +35,7 @@ export function BetPanel({ initialEvent, initialBalance, bonuses }: { initialEve
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       setEvent(body.event); setBalance(body.balance); setState("success");
+      window.dispatchEvent(new CustomEvent("wedbet:balance", { detail: body.balance }));
       setMessage(`Ставка принята сервером. Коэффициент сейчас ×${formatCoefficient(body.bet.projectedCoefficient)}.`);
     } catch (error) { setState("error"); setMessage(error instanceof Error ? error.message : "Не удалось принять ставку"); }
   }

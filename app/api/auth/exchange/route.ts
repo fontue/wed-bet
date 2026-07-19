@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { token?: string };
     if (!body.token) return NextResponse.json({ error: "Укажите токен входа" }, { status: 400 });
-    const isDevelopmentDemo = process.env.NODE_ENV !== "production" && (body.token === "guest-demo" || body.token === "admin-demo");
+    const isDevelopmentDemo = process.env.NODE_ENV !== "production" && ["guest-demo", "misha-demo", "admin-demo"].includes(body.token);
     const { session, user } = isDevelopmentDemo ? createDevelopmentSession(body.token) : exchangeLoginToken(body.token);
     const response = NextResponse.json({ user: { id: user.id, displayName: user.displayName, role: user.role } });
     response.cookies.set(SESSION_COOKIE, session.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", expires: new Date(session.expiresAt) });
