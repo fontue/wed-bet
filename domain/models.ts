@@ -1,4 +1,5 @@
 import type { LemonzaMode, LemonzaRoundResult } from "./slots/sweet-lemonza/types";
+import type { DogHouseRoundResult } from "./slots/dog-house/types";
 
 export type UserRole = "USER" | "ADMIN";
 export type UserStatus = "ACTIVE" | "BLOCKED";
@@ -83,6 +84,29 @@ export interface SlotRound {
   createdAt: string;
 }
 
+export interface DogHouseSlotRound {
+  id:string;
+  gameId:"casa-degli-sposi";
+  mathVersion:string;
+  userId:string;
+  stake:number;
+  mode:"STANDARD";
+  chargedAmount:number;
+  baseWin:number;
+  scatterWin:number;
+  bonusWin:number;
+  totalWin:number;
+  balanceBefore:number;
+  balanceAfter:number;
+  bonusTriggered:boolean;
+  maxMultiplier:number;
+  idempotencyKey:string;
+  result:DogHouseRoundResult;
+  createdAt:string;
+}
+
+export type AnySlotRound=SlotRound|DogHouseSlotRound;
+
 export interface SlotOperationalSettings {
   gameId: "sweet-lemonza";
   enabled: boolean;
@@ -92,6 +116,15 @@ export interface SlotOperationalSettings {
   maxBet: number;
   lemonBoostEnabled: boolean;
   bonusBuyEnabled: boolean;
+}
+
+export interface DogHouseOperationalSettings {
+  gameId:"casa-degli-sposi";
+  enabled:boolean;
+  spinsEnabled:boolean;
+  allowedBets:number[];
+  minBet:number;
+  maxBet:number;
 }
 
 export interface User {

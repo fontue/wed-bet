@@ -5,11 +5,15 @@ import { DUEL_GAME_META, DUEL_POT, DUEL_STAKE, DUEL_TTL_MS, generateDuelResult }
 import { LEMONZA_BETS, LEMONZA_GAME } from "@/domain/slots/sweet-lemonza/config";
 import { runSweetLemonzaRound } from "@/domain/slots/sweet-lemonza/engine";
 import { createCryptoRng } from "@/domain/slots/sweet-lemonza/rng";
+import { DOG_HOUSE_BETS, DOG_HOUSE_GAME } from "@/domain/slots/dog-house/config";
+import { runDogHouseRound } from "@/domain/slots/dog-house/engine";
 import type {
   Bet,
+  AnySlotRound,
   BonusSpin,
   Duel,
   DuelGame,
+  DogHouseOperationalSettings,
   LoginToken,
   MarketEvent,
   Session,
@@ -37,8 +41,9 @@ interface MockState {
   spins: BonusSpin[];
   news: typeof seedNews;
   duels: Duel[];
-  slotRounds: SlotRound[];
+  slotRounds: AnySlotRound[];
   slotSettings: SlotOperationalSettings;
+  dogHouseSettings: DogHouseOperationalSettings;
   loginTokens: LoginToken[];
   sessions: Session[];
   betRequests: Map<string, string>;
@@ -70,6 +75,7 @@ function initialState(): MockState {
     duels: [],
     slotRounds: [],
     slotSettings: { gameId: "sweet-lemonza", enabled: true, spinsEnabled: true, allowedBets: [...LEMONZA_BETS], minBet: LEMONZA_BETS[0], maxBet: LEMONZA_BETS.at(-1)!, lemonBoostEnabled: true, bonusBuyEnabled: true },
+    dogHouseSettings: { gameId: "casa-degli-sposi", enabled: true, spinsEnabled: true, allowedBets: [...DOG_HOUSE_BETS], minBet: DOG_HOUSE_BETS[0], maxBet: DOG_HOUSE_BETS.at(-1)! },
     loginTokens: process.env.NODE_ENV === "production" ? [] : [
       { id: "lt-guest", userId: "u-sofia", tokenHash: hash("guest-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
       { id: "lt-misha", userId: "u-misha", tokenHash: hash("misha-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
@@ -102,6 +108,7 @@ store.duelCreateRequests ??= new Map();
 store.duelActionRequests ??= new Map();
 store.slotRounds ??= [];
 store.slotSettings ??= { gameId: "sweet-lemonza", enabled: true, spinsEnabled: true, allowedBets: [...LEMONZA_BETS], minBet: LEMONZA_BETS[0], maxBet: LEMONZA_BETS.at(-1)!, lemonBoostEnabled: true, bonusBuyEnabled: true };
+store.dogHouseSettings ??= { gameId: "casa-degli-sposi", enabled: true, spinsEnabled: true, allowedBets: [...DOG_HOUSE_BETS], minBet: DOG_HOUSE_BETS[0], maxBet: DOG_HOUSE_BETS.at(-1)! };
 store.slotSettings.lemonBoostEnabled ??= true;
 store.slotSettings.bonusBuyEnabled ??= true;
 if (store.slotSettings.allowedBets.some((value) => !LEMONZA_BETS.includes(value as typeof LEMONZA_BETS[number]))) {
@@ -597,7 +604,7 @@ export function getSweetLemonzaState(userId: string) {
     game: LEMONZA_GAME,
     settings: clone(store.slotSettings),
     balance: user.balance,
-    history: clone(store.slotRounds.filter((round) => round.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20)),
+    history: clone(store.slotRounds.filter((round):round is Extract<AnySlotRound,{gameId:"sweet-lemonza"}> => round.gameId === "sweet-lemonza" && round.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20)),
   };
 }
 
@@ -605,7 +612,7 @@ export function spinSweetLemonza(input: { userId: string; stake: number; mode: L
   const existingRoundId = store.slotSpinRequests.get(input.idempotencyKey);
   if (existingRoundId) {
     const existing = store.slotRounds.find((round) => round.id === existingRoundId);
-    if (!existing || existing.userId !== input.userId) throw new Error("IDEMPOTENCY_CONFLICT");
+    if (!existing || existing.gameId !== "sweet-lemonza" || existing.userId !== input.userId) throw new Error("IDEMPOTENCY_CONFLICT");
     return { round: clone(existing), balance: existing.balanceAfter };
   }
   const user = store.users.find((item) => item.id === input.userId && item.role === "USER" && item.status === "ACTIVE");
@@ -643,7 +650,7 @@ export function spinSweetLemonza(input: { userId: string; stake: number; mode: L
     };
     store.slotRounds.push(round);
     store.slotSpinRequests.set(input.idempotencyKey, round.id);
-    const userRounds = store.slotRounds.filter((item) => item.userId === user.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const userRounds = store.slotRounds.filter((item) => item.gameId === "sweet-lemonza" && item.userId === user.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     if (userRounds.length > 100) {
       const removeIds = new Set(userRounds.slice(100).map((item) => item.id));
       store.slotRounds = store.slotRounds.filter((item) => !removeIds.has(item.id));
@@ -654,8 +661,37 @@ export function spinSweetLemonza(input: { userId: string; stake: number; mode: L
   }
 }
 
+export function getDogHouseState(userId:string){
+  const user=store.users.find((item)=>item.id===userId);
+  if(!user)throw new Error("USER_NOT_FOUND");
+  return{game:DOG_HOUSE_GAME,settings:clone(store.dogHouseSettings),balance:user.balance,history:clone(store.slotRounds.filter((round):round is Extract<AnySlotRound,{gameId:"casa-degli-sposi"}>=>round.gameId==="casa-degli-sposi"&&round.userId===userId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,20))};
+}
+
+export function spinDogHouse(input:{userId:string;stake:number;idempotencyKey:string}){
+  const existingRoundId=store.slotSpinRequests.get(input.idempotencyKey);
+  if(existingRoundId){const existing=store.slotRounds.find((round)=>round.id===existingRoundId);if(!existing||existing.gameId!=="casa-degli-sposi"||existing.userId!==input.userId)throw new Error("IDEMPOTENCY_CONFLICT");return{round:clone(existing),balance:existing.balanceAfter};}
+  const user=store.users.find((item)=>item.id===input.userId&&item.role==="USER"&&item.status==="ACTIVE");
+  if(!user)throw new Error("USER_UNAVAILABLE");
+  if(!store.dogHouseSettings.enabled||!store.dogHouseSettings.spinsEnabled)throw new Error("SLOT_DISABLED");
+  if(!Number.isInteger(input.stake)||!store.dogHouseSettings.allowedBets.includes(input.stake))throw new Error("INVALID_STAKE");
+  if(store.slotInFlightUsers.has(user.id))throw new Error("SPIN_IN_PROGRESS");
+  store.slotInFlightUsers.add(user.id);
+  try{
+    if(user.balance<input.stake)throw new Error("INSUFFICIENT_BALANCE");
+    const result=runDogHouseRound(input.stake,createCryptoRng()),createdAt=new Date().toISOString(),balanceBefore=user.balance;
+    user.balance-=input.stake;
+    store.transactions.push({id:randomUUID(),userId:user.id,amount:-input.stake,type:"SLOT_BET",reason:"Casa degli Sposi · Spin",balanceAfter:user.balance,operationKey:`slot:${input.idempotencyKey}:bet`,createdAt});
+    if(result.totalPayout>0){user.balance+=result.totalPayout;store.transactions.push({id:randomUUID(),userId:user.id,amount:result.totalPayout,type:"SLOT_WIN",reason:`Casa degli Sposi · выигрыш ${result.totalPayout}`,balanceAfter:user.balance,operationKey:`slot:${input.idempotencyKey}:win`,createdAt});}
+    const round:Extract<AnySlotRound,{gameId:"casa-degli-sposi"}>={id:randomUUID(),gameId:"casa-degli-sposi",mathVersion:result.mathVersion,userId:user.id,stake:input.stake,mode:"STANDARD",chargedAmount:input.stake,baseWin:result.baseGamePayout,scatterWin:result.bonusScatterPayout,bonusWin:result.bonusPayout,totalWin:result.totalPayout,balanceBefore,balanceAfter:user.balance,bonusTriggered:result.bonusTriggered,maxMultiplier:result.maxMultiplier,idempotencyKey:input.idempotencyKey,result,createdAt};
+    store.slotRounds.push(round);store.slotSpinRequests.set(input.idempotencyKey,round.id);
+    const userRounds=store.slotRounds.filter((item)=>item.gameId==="casa-degli-sposi"&&item.userId===user.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+    if(userRounds.length>100){const removeIds=new Set(userRounds.slice(100).map((item)=>item.id));store.slotRounds=store.slotRounds.filter((item)=>!removeIds.has(item.id));}
+    return{round:clone(round),balance:user.balance};
+  }finally{store.slotInFlightUsers.delete(user.id);}
+}
+
 export function getSweetLemonzaAdminState(query?: string) {
-  const rounds = [...store.slotRounds].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const rounds = store.slotRounds.filter((round):round is Extract<AnySlotRound,{gameId:"sweet-lemonza"}>=>round.gameId==="sweet-lemonza").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const filtered = query ? rounds.filter((round) => round.id.toLowerCase().includes(query.toLowerCase())) : rounds;
   const totalStake = rounds.reduce((sum, round) => sum + (round.chargedAmount ?? round.stake), 0);
   const totalWin = rounds.reduce((sum, round) => sum + round.totalWin, 0);

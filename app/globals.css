@@ -208,3 +208,113 @@ button { cursor: pointer; }
   .lemonza-shake { animation:none!important; }
 }
 @keyframes lemonza-reduced-enter{from{opacity:0;transform:translate3d(0,var(--slot-start-y),0)}to{opacity:1;transform:translate3d(0,var(--slot-y),0)}}
+
+/* Casa degli Sposi — independent 5×3 wedding-dog slot. */
+.dogslot-screen{position:fixed;z-index:70;inset:0;display:flex;height:100dvh;flex-direction:column;overflow:hidden;background:linear-gradient(#67bcd6 0 46%,#83c86d 46% 68%,#e4bd82 68%);color:#40261e}.dogslot-sky{position:absolute;inset:0;background:radial-gradient(circle at 18% 14%,#fff9c9 0 3%,transparent 3.3%),linear-gradient(135deg,transparent 0 70%,rgba(255,255,255,.18) 70%);pointer-events:none}.dogslot-top{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:max(.55rem,env(safe-area-inset-top)) .7rem .35rem}.dogslot-top>a,.dogslot-top button{display:grid;width:2.35rem;height:2.35rem;place-items:center;border:1px solid rgba(255,255,255,.65);border-radius:50%;background:rgba(89,49,37,.82);color:white;font-size:1.05rem;font-weight:900}.dogslot-top>div{border-radius:999px;background:rgba(89,49,37,.86);padding:.48rem .9rem;color:white;font-size:.82rem;font-weight:950}.dogslot-top>div span{margin-right:.25rem;color:#ffdc55}.dogslot-top nav{display:flex;gap:.3rem}.dogslot-screen>main{position:relative;z-index:2;display:flex;min-height:0;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:0 .55rem}.dogslot-title{text-align:center}.dogslot-title small{font-size:.52rem;font-weight:950;letter-spacing:.22em;text-transform:uppercase}.dogslot-title h1{margin:.05rem 0 .45rem;font-family:Georgia,serif;font-size:clamp(1.8rem,8vw,3rem);font-weight:950;line-height:.9;color:white;text-shadow:0 3px 0 #854930,0 7px 16px rgba(0,0,0,.25);transform:rotate(-2deg)}.dogslot-title h1 b{color:#ffe05a}.dogslot-machine{position:relative;width:min(100%,31rem);overflow:hidden;border:6px solid #f5c74f;border-radius:1.25rem;background:#713b2c;padding:.32rem;box-shadow:0 .6rem 0 #763d2c,0 1.2rem 2rem rgba(72,42,26,.28),inset 0 0 0 3px #fff1a2}.dogslot-reels{display:grid;aspect-ratio:5/3;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(3,1fr);overflow:hidden;border-radius:.72rem;background:linear-gradient(#fff7d8,#f2dfb8)}.dogslot-cell{position:relative;display:grid;min-width:0;place-items:center;border-right:1px solid rgba(103,62,39,.12);border-bottom:1px solid rgba(103,62,39,.12);padding:.12rem;contain:layout paint}.dogslot-cell svg{width:100%;height:100%;filter:drop-shadow(0 2px 1px rgba(75,42,26,.18));animation:dogslot-land .42s cubic-bezier(.2,.75,.25,1.15) calc(var(--reel)*55ms) both}.dogslot-cell.is-winning{z-index:2;background:radial-gradient(circle,rgba(255,230,83,.8),transparent 72%)}.dogslot-cell.is-winning svg{animation:dogslot-win .65s ease-in-out infinite alternate}.dogslot-cell.is-sticky::after{content:"STICKY";position:absolute;right:.08rem;bottom:.06rem;border-radius:999px;background:#e8535e;padding:.08rem .2rem;color:white;font-size:.28rem;font-weight:950}.dogslot-motion{position:absolute;inset:.32rem;display:grid;grid-template-columns:repeat(5,1fr);overflow:hidden;border-radius:.72rem;background:#fff0c5}.dogslot-motion span{background:repeating-linear-gradient(180deg,#e6b849 0 14%,#7c4432 15% 29%,#fff1b2 30% 44%);filter:blur(2px);animation:dogslot-reel-motion .32s linear infinite}.dogslot-status{display:flex;min-height:2.5rem;align-items:center;justify-content:center;gap:.5rem;text-align:center}.dogslot-status span,.dogslot-status strong{border-radius:999px;background:rgba(255,249,220,.88);padding:.3rem .65rem;font-size:.72rem;font-weight:950}.dogslot-status strong{color:#8b3e2e}.dogslot-status>b{border-radius:.6rem;background:#a94338;padding:.35rem .65rem;color:white;font-size:.68rem}.dogslot-controls{position:relative;z-index:5;display:grid;grid-template-columns:minmax(0,1fr) 4.7rem 3.2rem;align-items:end;gap:.45rem;border-top:1px solid rgba(255,247,201,.7);background:rgba(255,244,210,.88);padding:.45rem .55rem max(.5rem,env(safe-area-inset-bottom));backdrop-filter:blur(6px)}.dogslot-bet{display:grid;height:2.85rem;grid-template-columns:2.2rem minmax(0,1fr) 2.2rem;overflow:hidden;border:1px solid rgba(85,47,35,.16);border-radius:999px;background:rgba(255,255,255,.7)}.dogslot-bet button{border:0;background:linear-gradient(#8c4c36,#643326);color:white;font-size:1.35rem;font-weight:950}.dogslot-bet button:disabled{opacity:1}.dogslot-bet span{display:grid;place-content:center;text-align:center}.dogslot-bet small{font-size:.45rem;font-weight:900;text-transform:uppercase}.dogslot-bet b{font-size:.76rem}.dogslot-spin{display:grid;width:4.7rem;height:4.7rem;place-content:center;border:5px solid #fff0a5;border-radius:50%;background:radial-gradient(circle at 35% 25%,#ffde57,#eca932);color:#583021;font-weight:950;box-shadow:0 5px 0 #9a5a27,0 8px 16px rgba(0,0,0,.2)}.dogslot-spin:disabled{filter:none;opacity:1}.dogslot-spin small{font-size:.45rem}.dogslot-turbo{display:grid;width:3.1rem;height:3.1rem;place-content:center;border:2px solid white;border-radius:50%;background:#fff8df;color:#653527;box-shadow:0 3px 0 #b17d43}.dogslot-turbo.is-active{background:#f5ce4d}.dogslot-turbo b{font-size:1rem}.dogslot-turbo small{font-size:.4rem;font-weight:950;text-transform:uppercase}.dogslot-overlay{position:fixed;z-index:120;inset:0;display:grid;place-items:center;border:0;background:rgba(47,27,22,.8);padding:max(.7rem,env(safe-area-inset-top)) .7rem max(.7rem,env(safe-area-inset-bottom));color:white;backdrop-filter:blur(5px)}.dogslot-rules-backdrop{align-items:end}.dogslot-rules,.dogslot-sheet{display:flex;width:min(100%,42rem);max-height:calc(100dvh - 1.4rem);flex-direction:column;overflow:hidden;border:1px solid rgba(255,240,163,.55);border-radius:1.35rem;background:#fff9e9;color:#452c22;box-shadow:0 1.5rem 4rem rgba(0,0,0,.35)}.dogslot-rules>header,.dogslot-sheet>header{display:flex;flex:none;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#824832,#5f3026);padding:.75rem 1rem;color:white}.dogslot-rules header small{color:#f4cd54;font-size:.62rem;font-weight:900;text-transform:uppercase}.dogslot-rules h2,.dogslot-sheet h2{margin:.08rem 0 0;font-family:Georgia,serif;font-size:1.3rem}.dogslot-rules header button,.dogslot-sheet header button{display:grid;width:2.2rem;height:2.2rem;place-items:center;border:1px solid rgba(255,255,255,.25);border-radius:50%;background:rgba(255,255,255,.12);color:white;font-size:1.2rem}.dogslot-rules-scroll{min-height:0;overflow-y:auto;padding:.8rem;scrollbar-width:none}.dogslot-rule-lead{border-radius:.85rem;background:#f3e5c8;padding:.7rem;font-size:.75rem;font-weight:800;line-height:1.35}.dogslot-rule-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem;margin-top:.55rem}.dogslot-rule-cards article{border:1px solid rgba(91,52,37,.1);border-radius:.75rem;background:white;padding:.55rem}.dogslot-rule-cards b{color:#8b4a32;font-size:.76rem}.dogslot-rule-cards p{margin:.15rem 0 0;color:#6f625a;font-size:.65rem;line-height:1.35}.dogslot-paytable{margin-top:.6rem;overflow:hidden;border-radius:.9rem;background:#35231e;color:white}.dogslot-pay-head{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.07);padding:.65rem .75rem}.dogslot-pay-head small{color:#f3ce56;font-size:.62rem}.dogslot-paytable>div:last-child{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.25rem;padding:.4rem}.dogslot-paytable article{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.2rem;border-radius:.6rem;background:rgba(255,255,255,.05);padding:.22rem .3rem}.dogslot-paytable article>span{display:flex;min-width:0;align-items:center;gap:.18rem}.dogslot-paytable svg{width:2.4rem;height:2.4rem;flex:none}.dogslot-paytable article>span b{overflow:hidden;font-size:.66rem;text-overflow:ellipsis;white-space:nowrap}.dogslot-paytable article>div{display:grid;justify-items:end}.dogslot-paytable em{font-size:.58rem;font-style:normal;font-weight:900;white-space:nowrap}.dogslot-rules details{margin-top:.55rem;border-radius:.75rem;background:#f0e3c8;padding:.55rem}.dogslot-rules summary{cursor:pointer;font-size:.72rem;font-weight:900}.dogslot-lines{display:grid;grid-template-columns:repeat(4,1fr);gap:.25rem;margin-top:.45rem}.dogslot-lines>span{position:relative;display:grid;aspect-ratio:5/3;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(3,1fr);border-radius:.35rem;background:#d4c4a8;padding:.15rem}.dogslot-lines b{position:absolute;z-index:2;left:.1rem;top:.05rem;font-size:.45rem}.dogslot-lines i{border-radius:50%;background:#e95761}.dogslot-disclaimer{margin:.6rem 0 0;color:#81736a;font-size:.62rem}.dogslot-sheet{align-self:end;max-width:28rem}.dogslot-history-row{display:grid;grid-template-columns:1fr 1fr 1fr;padding:.75rem 1rem;border-bottom:1px solid rgba(80,45,31,.08);font-size:.75rem}.dogslot-history-row strong{text-align:right}.dogslot-history-row strong.is-win{color:#2c7958}.dogslot-bonus-intro,.dogslot-summary{align-content:center;text-align:center}.dogslot-bonus-intro>span,.dogslot-summary>span{color:#f3cf56;font-size:.75rem;font-weight:950;letter-spacing:.18em}.dogslot-bonus-intro>strong,.dogslot-summary>strong{font-family:Georgia,serif;font-size:clamp(3.5rem,18vw,7rem);line-height:1;color:white;text-shadow:0 5px 0 #8b4d2d}.dogslot-bonus-intro>b,.dogslot-summary>b{font-size:1.15rem}.dogslot-bonus-intro>small,.dogslot-summary>small{margin-top:1rem;opacity:.72}.dogslot-bonus-intro>div{display:grid;grid-template-columns:repeat(3,2.2rem);gap:.25rem;margin-top:1rem}.dogslot-bonus-intro i{display:grid;aspect-ratio:1;place-items:center;border:2px solid #f3cd55;border-radius:50%;background:#fff4ca;color:#7d3d2e;font-style:normal;font-weight:950}
+@keyframes dogslot-land{from{opacity:.25;transform:translateY(-90%) rotate(-3deg)}75%{opacity:1;transform:translateY(4%)}to{transform:none}}@keyframes dogslot-win{to{transform:scale(1.08);filter:brightness(1.15) drop-shadow(0 0 7px #ffe46b)}}@keyframes dogslot-reel-motion{to{transform:translateY(44%)}}
+@media (min-width:768px){.dogslot-rules-backdrop{place-items:center}.dogslot-sheet{align-self:center}.dogslot-controls{grid-template-columns:minmax(10rem,1fr) 5rem minmax(5rem,1fr);max-width:34rem;width:100%;margin-inline:auto;border-radius:1rem 1rem 0 0}.dogslot-turbo{justify-self:end}}
+@media (max-width:350px){.dogslot-controls{grid-template-columns:minmax(0,1fr) 4.2rem 2.75rem;gap:.3rem}.dogslot-spin{width:4.2rem;height:4.2rem}.dogslot-turbo{width:2.7rem;height:2.7rem}.dogslot-bet{grid-template-columns:1.7rem minmax(0,1fr) 1.7rem}.dogslot-paytable svg{width:2rem;height:2rem}.dogslot-paytable em{font-size:.5rem}.dogslot-paytable article>span b{font-size:.56rem}}
+
+/* Casa degli Sposi presentation polish. The game math lives in domain/slots/dog-house. */
+.dogslot-screen{isolation:isolate;background:linear-gradient(#67bed9 0 43%,#82c66c 43% 68%,#dfb77c 68%)}
+.dogslot-sky{background:
+  radial-gradient(ellipse at 15% 23%,rgba(255,255,255,.82) 0 4%,transparent 4.4%),
+  radial-gradient(ellipse at 22% 21%,rgba(255,255,255,.72) 0 3%,transparent 3.4%),
+  radial-gradient(ellipse at 83% 15%,rgba(255,255,255,.72) 0 4%,transparent 4.4%),
+  linear-gradient(90deg,transparent 0 8%,rgba(255,246,194,.55) 8.2% 8.7%,transparent 8.9% 91%,rgba(255,246,194,.5) 91.2% 91.7%,transparent 91.9%)}
+.dogslot-screen::before{content:"";position:absolute;z-index:0;inset:auto 0 18% 0;height:19%;opacity:.3;background:repeating-linear-gradient(90deg,transparent 0 8%,#f7e4bd 8.2% 8.8%,transparent 9% 16%),linear-gradient(transparent 42%,#f7e4bd 43% 49%,transparent 50%);pointer-events:none}
+.dogslot-screen.is-bonus-mode{background:linear-gradient(#47548d 0 43%,#526d58 43% 68%,#bd855f 68%)}
+.dogslot-screen.is-bonus-mode .dogslot-sky{opacity:.65;filter:hue-rotate(14deg)}
+.dogslot-machine{border-color:#f7ce58;background:linear-gradient(135deg,#9b5537,#653124);box-shadow:0 .55rem 0 #713726,0 1.15rem 2rem rgba(57,31,22,.35),inset 0 0 0 3px #fff2a4}
+.dogslot-machine::before{content:"";position:absolute;z-index:5;inset:.32rem;pointer-events:none;border-radius:.72rem;box-shadow:inset 0 0 0 1px rgba(81,44,31,.22),inset 0 0 1.2rem rgba(96,49,32,.12)}
+.dogslot-reels{position:relative;background:linear-gradient(180deg,#fffbed,#f3dfb6 54%,#ead09f)}
+.dogslot-cell{transition:opacity .08s linear,filter .08s linear;background:linear-gradient(90deg,rgba(255,255,255,.18),transparent 22% 78%,rgba(96,55,35,.035))}
+.dogslot-cell:nth-child(5n){border-right:0}
+.dogslot-cell:nth-child(n+11){border-bottom:0}
+.dogslot-cell.is-concealed{opacity:0}
+.dogslot-cell.is-sticky{z-index:4;background:radial-gradient(circle,rgba(255,230,105,.38),transparent 68%)}
+.dogslot-cell.is-sticky svg{animation:none;filter:drop-shadow(0 0 6px rgba(255,214,64,.8))}
+.dogslot-cell.is-new-sticky svg{animation:dogslot-lock .5s cubic-bezier(.16,.8,.24,1.25) both}
+.dogslot-motion{z-index:3;background:transparent;pointer-events:none}
+.dogslot-motion span{position:relative;border-right:1px solid rgba(103,62,39,.15);background:repeating-linear-gradient(180deg,#f4d77e 0 13%,#a86b4a 14% 27%,#fff0b4 28% 42%);filter:blur(1.2px);will-change:transform;transform:translateZ(0);animation-duration:.23s}
+.dogslot-motion span::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(73,38,28,.2),transparent 22% 76%,rgba(73,38,28,.18))}
+.dogslot-motion span.is-stopped{visibility:hidden;animation:none}
+.dogslot-machine.is-dropping{transform:translateZ(0)}
+.dogslot-machine.is-dropping .dogslot-cell:not(.is-sticky) svg{animation:none}
+.dogslot-machine.is-free-spin{box-shadow:0 .55rem 0 #713726,0 0 0 3px rgba(255,231,96,.22),0 1.15rem 2rem rgba(57,31,22,.35),inset 0 0 0 3px #fff2a4}
+.dogslot-status strong{animation:dogslot-status-in .22s ease-out both}
+.dogslot-top nav{gap:.25rem}
+.dogslot-top nav button{width:2.15rem;height:2.15rem;font-size:.9rem}
+.dogslot-bonus-intro{overflow:hidden;background:radial-gradient(circle at 50% 35%,rgba(149,79,47,.45),rgba(39,23,20,.92) 62%);cursor:pointer}
+.dogslot-bonus-intro::before{content:"";position:absolute;width:min(94vw,27rem);aspect-ratio:1;border:1px solid rgba(255,218,91,.22);border-radius:50%;box-shadow:0 0 0 1.4rem rgba(255,218,91,.04),0 0 0 2.8rem rgba(255,218,91,.025);animation:dogslot-bonus-halo 2.2s ease-in-out infinite}
+.dogslot-bonus-intro>*{position:relative;z-index:1}
+.dogslot-bonus-intro>strong{min-width:1.2em;font-variant-numeric:tabular-nums}
+.dogslot-bonus-intro>div{grid-template-columns:repeat(3,clamp(2.8rem,14vw,4.2rem));gap:.38rem;margin-top:1rem;perspective:500px}
+.dogslot-bonus-intro i{position:relative;width:100%;overflow:hidden;border:3px solid #f3cd55;background:radial-gradient(circle at 35% 25%,#fff8d5,#e5b840);box-shadow:0 4px 0 #8b4a2e,0 8px 16px rgba(0,0,0,.2);transform-style:preserve-3d;transition:transform .3s cubic-bezier(.2,.8,.25,1.15),background .2s}
+.dogslot-bonus-intro i>span,.dogslot-bonus-intro i>b{position:absolute;inset:0;display:grid;place-items:center;backface-visibility:hidden}
+.dogslot-bonus-intro i>span{font-size:1.25rem;color:#8b4831}
+.dogslot-bonus-intro i>b{font-family:Georgia,serif;font-size:1.45rem;color:#743426;transform:rotateY(180deg)}
+.dogslot-bonus-intro i.is-open{background:radial-gradient(circle at 35% 25%,#fffdf0,#fff0a0);transform:rotateY(180deg)}
+.dogslot-bonus-intro i.is-open>span{opacity:0}
+.dogslot-summary>strong{animation:dogslot-summary-in .55s cubic-bezier(.2,.85,.25,1.1) both}
+@keyframes dogslot-lock{0%{transform:scale(.55) rotate(-8deg);filter:brightness(1.8)}55%{transform:scale(1.14) rotate(2deg)}100%{transform:none;filter:drop-shadow(0 0 6px rgba(255,214,64,.8))}}
+@keyframes dogslot-status-in{from{opacity:0;transform:translateY(.35rem) scale(.94)}to{opacity:1;transform:none}}
+@keyframes dogslot-bonus-halo{50%{transform:scale(1.045);opacity:.65}}
+@keyframes dogslot-summary-in{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.dogslot-motion span{animation-duration:.5s}.dogslot-bonus-intro::before,.dogslot-cell svg,.dogslot-status strong,.dogslot-summary>strong{animation:none!important}}
+
+/* Real symbol strips: one landing per reel, with no second animation on result. */
+.dogslot-cell svg{animation:none}
+.dogslot-cell.is-landing:not(.is-sticky) svg{animation:dogslot-reel-land .2s cubic-bezier(.2,.78,.24,1.08) both}
+.dogslot-motion{background:linear-gradient(180deg,#fff8dc,#efd5a4)}
+.dogslot-motion .dogslot-motion-reel{min-width:0;overflow:hidden;border-right:1px solid rgba(103,62,39,.15);background:linear-gradient(90deg,rgba(255,255,255,.18),transparent 20% 80%,rgba(96,55,35,.04));contain:strict;transition:opacity .055s linear}
+.dogslot-motion .dogslot-motion-reel:last-child{border-right:0}
+.dogslot-motion .dogslot-motion-reel.is-stopped{visibility:hidden;opacity:0}
+.dogslot-motion .dogslot-motion-reel>div{display:grid;height:400%;grid-template-rows:repeat(12,minmax(0,1fr));will-change:transform;transform:translate3d(0,0,0);animation:dogslot-symbol-strip var(--spin-speed) linear infinite}
+.dogslot-motion .dogslot-motion-reel span{display:grid;min-height:0;place-items:center;background:none;filter:none;animation:none}
+.dogslot-motion .dogslot-motion-reel span::after{content:none}
+.dogslot-motion .dogslot-motion-reel svg{width:94%;height:94%;filter:blur(.35px) drop-shadow(0 2px 1px rgba(75,42,26,.14));transform:translateZ(0)}
+@keyframes dogslot-symbol-strip{from{transform:translate3d(0,-50%,0)}to{transform:translate3d(0,0,0)}}
+@keyframes dogslot-reel-land{from{opacity:.55;transform:translate3d(0,-18%,0) scaleY(1.04)}70%{opacity:1;transform:translate3d(0,3%,0) scaleY(.98)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.dogslot-motion .dogslot-motion-reel>div{animation-duration:900ms}.dogslot-cell.is-landing:not(.is-sticky) svg{animation:none}}
+
+/* Each reel owns its animation layer so stopping one cannot blank the whole grid. */
+.dogslot-reels{grid-template-rows:1fr}
+.dogslot-reel{position:relative;min-width:0;overflow:hidden;border-right:3px solid rgba(111,61,38,.42);box-shadow:1px 0 0 rgba(255,244,191,.5)}
+.dogslot-reel:last-child{border-right:0}
+.dogslot-reel-result{position:absolute;inset:0;display:grid;grid-template-rows:repeat(3,minmax(0,1fr))}
+.dogslot-reel .dogslot-cell{border-right:0;border-bottom:1px solid rgba(103,62,39,.12)}
+.dogslot-reel .dogslot-cell:last-child{border-bottom:0}
+.dogslot-reel>.dogslot-motion-reel{position:absolute;z-index:3;inset:0;overflow:hidden;background:linear-gradient(90deg,#fff7da,#efd5a4 50%,#fff3c9);contain:layout paint}
+.dogslot-reel>.dogslot-motion-reel>div{display:grid;height:400%;grid-template-rows:repeat(12,minmax(0,1fr));will-change:transform;transform:translate3d(0,0,0);animation:dogslot-symbol-strip var(--spin-speed) linear infinite}
+.dogslot-reel>.dogslot-motion-reel span{display:grid;min-height:0;place-items:center;background:none;filter:none;animation:none}
+.dogslot-reel>.dogslot-motion-reel span::after{content:none}
+.dogslot-reel>.dogslot-motion-reel svg{width:94%;height:94%;filter:blur(.35px) drop-shadow(0 2px 1px rgba(75,42,26,.14));transform:translateZ(0)}
+.dogslot-reel>.dogslot-motion-reel.is-settling{pointer-events:none;animation:dogslot-reel-settle var(--settle-speed) ease-out forwards}
+@keyframes dogslot-reel-settle{from{opacity:1;filter:blur(0)}to{opacity:0;filter:blur(1.5px)}}
+@media (prefers-reduced-motion:reduce){.dogslot-reel>.dogslot-motion-reel>div{animation-duration:900ms}}
+
+/* Layered suburban garden backdrop, kept entirely behind the game surface. */
+.dogslot-screen{background:
+  radial-gradient(ellipse at 50% 108%,rgba(255,235,188,.92) 0 15%,rgba(221,171,107,.72) 31%,transparent 49%),
+  linear-gradient(180deg,#55b5d6 0%,#8bd4e3 42%,#69a954 42.3%,#86bf61 68%,#d7a66f 68.3%,#e4bd82 100%)}
+.dogslot-sky{overflow:hidden;background:
+  linear-gradient(180deg,rgba(50,155,204,.2),transparent 40%),
+  radial-gradient(ellipse at 12% 33%,rgba(255,255,255,.25) 0 7%,transparent 7.5%),
+  radial-gradient(ellipse at 88% 27%,rgba(255,255,255,.2) 0 9%,transparent 9.5%)}
+.dogslot-sky::before{content:"";position:absolute;left:8%;top:12%;width:4.7rem;height:1.35rem;border-radius:999px;background:rgba(255,252,226,.88);box-shadow:2.2rem -.55rem 0 .2rem rgba(255,252,226,.88),4.25rem .05rem 0 -.05rem rgba(255,252,226,.82),62vw 1.45rem 0 .15rem rgba(255,252,226,.76),66vw .7rem 0 .35rem rgba(255,252,226,.78),71vw 1.35rem 0 -.08rem rgba(255,252,226,.74);filter:drop-shadow(0 .35rem .45rem rgba(66,137,164,.12))}
+.dogslot-sky::after{content:"";position:absolute;right:9%;top:7%;width:clamp(3.8rem,16vw,6.5rem);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#fff9bd 0 28%,#ffe578 54%,rgba(255,222,91,.18) 55% 70%,transparent 71%);filter:drop-shadow(0 0 1rem rgba(255,230,113,.48))}
+.dogslot-screen::before{content:"";position:absolute;z-index:0;inset:auto 0 17% 0;height:23%;opacity:.78;background:
+  linear-gradient(180deg,transparent 0 31%,rgba(115,72,42,.3) 32% 38%,transparent 39% 69%,rgba(115,72,42,.28) 70% 76%,transparent 77%),
+  repeating-linear-gradient(90deg,transparent 0 4.6%,#f0d29c 4.8% 9.2%,transparent 9.4% 10.3%);clip-path:polygon(0 20%,4.8% 0,9.2% 20%,14.8% 0,19.2% 20%,24.8% 0,29.2% 20%,34.8% 0,39.2% 20%,44.8% 0,49.2% 20%,54.8% 0,59.2% 20%,64.8% 0,69.2% 20%,74.8% 0,79.2% 20%,84.8% 0,89.2% 20%,94.8% 0,100% 20%,100% 100%,0 100%);pointer-events:none}
+.dogslot-screen::after{content:"";position:absolute;z-index:1;inset:auto -3% 13% -3%;height:20%;background:
+  radial-gradient(ellipse at 2% 76%,#3f7e3f 0 13%,transparent 13.5%),
+  radial-gradient(ellipse at 13% 82%,#559849 0 18%,transparent 18.5%),
+  radial-gradient(ellipse at 27% 88%,#39733a 0 13%,transparent 13.5%),
+  radial-gradient(ellipse at 73% 88%,#39733a 0 13%,transparent 13.5%),
+  radial-gradient(ellipse at 88% 82%,#559849 0 18%,transparent 18.5%),
+  radial-gradient(ellipse at 99% 76%,#3f7e3f 0 13%,transparent 13.5%);filter:drop-shadow(0 -.3rem .25rem rgba(37,91,43,.18));pointer-events:none}
+.dogslot-screen.is-bonus-mode{background:
+  radial-gradient(ellipse at 50% 108%,rgba(221,178,132,.72) 0 15%,rgba(151,104,84,.62) 31%,transparent 49%),
+  linear-gradient(180deg,#3d4e83 0%,#66749d 42%,#486846 42.3%,#5e7d50 68%,#a87560 68.3%,#bc8b68 100%)}
+.dogslot-screen.is-bonus-mode .dogslot-sky::after{background:radial-gradient(circle,#fff8cf 0 31%,#e8e1c7 53%,rgba(235,232,205,.14) 54% 70%,transparent 71%);filter:drop-shadow(0 0 1rem rgba(240,237,207,.32))}
