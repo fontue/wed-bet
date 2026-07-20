@@ -2,6 +2,9 @@ import { createHash, randomInt, randomUUID } from "node:crypto";
 import { seedBets, seedBonusDefinitions, seedEvents, seedNews, seedTransactions, seedUsers } from "@/data/seed";
 import { marketView, quoteBet, totalPool } from "@/domain/market";
 import { DUEL_GAME_META, DUEL_POT, DUEL_STAKE, DUEL_TTL_MS, generateDuelResult } from "@/domain/duels";
+import { LEMONZA_BETS, LEMONZA_GAME } from "@/domain/slots/sweet-lemonza/config";
+import { runSweetLemonzaRound } from "@/domain/slots/sweet-lemonza/engine";
+import { createCryptoRng } from "@/domain/slots/sweet-lemonza/rng";
 import type {
   Bet,
   BonusSpin,
@@ -10,15 +13,20 @@ import type {
   LoginToken,
   MarketEvent,
   Session,
+  SlotOperationalSettings,
+  SlotRound,
   User,
   UserBonus,
   WalletTransaction,
 } from "@/domain/models";
+import type { LemonzaMode } from "@/domain/slots/sweet-lemonza/types";
 
 const SPIN_INTERVAL_MS = 30 * 60 * 1000;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MOCK_STATE_VERSION = 2;
 
 interface MockState {
+  schemaVersion: number;
   users: User[];
   events: MarketEvent[];
   bets: Bet[];
@@ -29,12 +37,16 @@ interface MockState {
   spins: BonusSpin[];
   news: typeof seedNews;
   duels: Duel[];
+  slotRounds: SlotRound[];
+  slotSettings: SlotOperationalSettings;
   loginTokens: LoginToken[];
   sessions: Session[];
   betRequests: Map<string, string>;
   spinRequests: Map<string, string>;
   duelCreateRequests: Map<string, string>;
   duelActionRequests: Map<string, string>;
+  slotSpinRequests: Map<string, string>;
+  slotInFlightUsers: Set<string>;
 }
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -43,6 +55,7 @@ const isoAfter = (milliseconds: number) => new Date(Date.now() + milliseconds).t
 
 function initialState(): MockState {
   return {
+    schemaVersion: MOCK_STATE_VERSION,
     users: clone(seedUsers),
     events: clone(seedEvents),
     bets: clone(seedBets),
@@ -55,6 +68,8 @@ function initialState(): MockState {
     spins: [],
     news: clone(seedNews),
     duels: [],
+    slotRounds: [],
+    slotSettings: { gameId: "sweet-lemonza", enabled: true, spinsEnabled: true, allowedBets: [...LEMONZA_BETS], minBet: LEMONZA_BETS[0], maxBet: LEMONZA_BETS.at(-1)!, lemonBoostEnabled: true, bonusBuyEnabled: true },
     loginTokens: process.env.NODE_ENV === "production" ? [] : [
       { id: "lt-guest", userId: "u-sofia", tokenHash: hash("guest-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
       { id: "lt-misha", userId: "u-misha", tokenHash: hash("misha-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
@@ -65,16 +80,37 @@ function initialState(): MockState {
     spinRequests: new Map(),
     duelCreateRequests: new Map(),
     duelActionRequests: new Map(),
+    slotSpinRequests: new Map(),
+    slotInFlightUsers: new Set(),
   };
 }
 
 const globalStore = globalThis as typeof globalThis & { __wedBetMockStore?: MockState };
-export const store = globalStore.__wedBetMockStore ?? initialState();
-if (process.env.NODE_ENV !== "production") globalStore.__wedBetMockStore = store;
+// This version intentionally drops all previous mock data. The wine-symbol
+// rename has no legacy migration because the current project does not
+// need to preserve users, sessions, wallet history, bets, duels or slot rounds.
+export const store = globalStore.__wedBetMockStore?.schemaVersion === MOCK_STATE_VERSION
+  ? globalStore.__wedBetMockStore
+  : initialState();
+// Route handlers and server components can be emitted as separate production bundles.
+// Keep the temporary in-memory repository shared inside one Node.js process so a
+// session created by /api/auth/exchange is visible to the following page request.
+globalStore.__wedBetMockStore = store;
 // Keep development hot reload compatible when the in-memory schema gains fields.
 store.duels ??= [];
 store.duelCreateRequests ??= new Map();
 store.duelActionRequests ??= new Map();
+store.slotRounds ??= [];
+store.slotSettings ??= { gameId: "sweet-lemonza", enabled: true, spinsEnabled: true, allowedBets: [...LEMONZA_BETS], minBet: LEMONZA_BETS[0], maxBet: LEMONZA_BETS.at(-1)!, lemonBoostEnabled: true, bonusBuyEnabled: true };
+store.slotSettings.lemonBoostEnabled ??= true;
+store.slotSettings.bonusBuyEnabled ??= true;
+if (store.slotSettings.allowedBets.some((value) => !LEMONZA_BETS.includes(value as typeof LEMONZA_BETS[number]))) {
+  store.slotSettings.allowedBets = [...LEMONZA_BETS];
+  store.slotSettings.minBet = LEMONZA_BETS[0];
+  store.slotSettings.maxBet = LEMONZA_BETS.at(-1)!;
+}
+store.slotSpinRequests ??= new Map();
+store.slotInFlightUsers ??= new Set();
 
 export function listEvents(): MarketEvent[] {
   return clone(store.events);
@@ -552,4 +588,95 @@ export function createNews(input: { title: string; body: string; emoji?: string 
   if (!input.title?.trim() || !input.body?.trim()) throw new Error("INVALID_NEWS");
   const item = { id: randomUUID(), title: input.title.trim(), body: input.body.trim(), emoji: input.emoji?.trim() || "🍋", publishedAt: new Date().toISOString() };
   store.news.unshift(item); return clone(item);
+}
+
+export function getSweetLemonzaState(userId: string) {
+  const user = store.users.find((item) => item.id === userId);
+  if (!user) throw new Error("USER_NOT_FOUND");
+  return {
+    game: LEMONZA_GAME,
+    settings: clone(store.slotSettings),
+    balance: user.balance,
+    history: clone(store.slotRounds.filter((round) => round.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20)),
+  };
+}
+
+export function spinSweetLemonza(input: { userId: string; stake: number; mode: LemonzaMode; idempotencyKey: string }): { round: SlotRound; balance: number } {
+  const existingRoundId = store.slotSpinRequests.get(input.idempotencyKey);
+  if (existingRoundId) {
+    const existing = store.slotRounds.find((round) => round.id === existingRoundId);
+    if (!existing || existing.userId !== input.userId) throw new Error("IDEMPOTENCY_CONFLICT");
+    return { round: clone(existing), balance: existing.balanceAfter };
+  }
+  const user = store.users.find((item) => item.id === input.userId && item.role === "USER" && item.status === "ACTIVE");
+  if (!user) throw new Error("USER_UNAVAILABLE");
+  if (!store.slotSettings.enabled || !store.slotSettings.spinsEnabled) throw new Error("SLOT_DISABLED");
+  if (!(["STANDARD", "LEMON_BOOST", "BONUS_BUY"] as LemonzaMode[]).includes(input.mode)) throw new Error("INVALID_MODE");
+  if (input.mode === "LEMON_BOOST" && !store.slotSettings.lemonBoostEnabled) throw new Error("MODE_DISABLED");
+  if (input.mode === "BONUS_BUY" && !store.slotSettings.bonusBuyEnabled) throw new Error("MODE_DISABLED");
+  if (!Number.isInteger(input.stake) || !store.slotSettings.allowedBets.includes(input.stake) || input.stake < store.slotSettings.minBet || input.stake > store.slotSettings.maxBet) throw new Error("INVALID_STAKE");
+  if (store.slotInFlightUsers.has(user.id)) throw new Error("SPIN_IN_PROGRESS");
+
+  store.slotInFlightUsers.add(user.id);
+  try {
+    const result = runSweetLemonzaRound(input.stake, createCryptoRng(), { captureDetails: true, includeBonus: true, mode: input.mode });
+    if (user.balance < result.chargedAmount) throw new Error("INSUFFICIENT_BALANCE");
+    const createdAt = new Date().toISOString();
+    const balanceBefore = user.balance;
+    user.balance -= result.chargedAmount;
+    store.transactions.push({
+      id: randomUUID(), userId: user.id, amount: -result.chargedAmount, type: "SLOT_BET", reason: `Sweet Lemonza · ${input.mode}`,
+      balanceAfter: user.balance, operationKey: `slot:${input.idempotencyKey}:bet`, createdAt,
+    });
+    if (result.totalPayout > 0) {
+      user.balance += result.totalPayout;
+      store.transactions.push({
+        id: randomUUID(), userId: user.id, amount: result.totalPayout, type: "SLOT_WIN", reason: `Sweet Lemonza · выигрыш ${result.totalPayout}`,
+        balanceAfter: user.balance, operationKey: `slot:${input.idempotencyKey}:win`, createdAt,
+      });
+    }
+    const round: SlotRound = {
+      id: randomUUID(), gameId: "sweet-lemonza", mathVersion: result.mathVersion, userId: user.id, stake: input.stake, mode: input.mode, chargedAmount: result.chargedAmount,
+      baseWin: result.baseGamePayout, scatterWin: result.scatterPayout, bonusWin: result.bonusPayout,
+      totalWin: result.totalPayout, balanceBefore, balanceAfter: user.balance, bonusTriggered: result.bonusTriggered,
+      maxMultiplier: result.maxMultiplier, idempotencyKey: input.idempotencyKey, result, createdAt,
+    };
+    store.slotRounds.push(round);
+    store.slotSpinRequests.set(input.idempotencyKey, round.id);
+    const userRounds = store.slotRounds.filter((item) => item.userId === user.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    if (userRounds.length > 100) {
+      const removeIds = new Set(userRounds.slice(100).map((item) => item.id));
+      store.slotRounds = store.slotRounds.filter((item) => !removeIds.has(item.id));
+    }
+    return { round: clone(round), balance: user.balance };
+  } finally {
+    store.slotInFlightUsers.delete(user.id);
+  }
+}
+
+export function getSweetLemonzaAdminState(query?: string) {
+  const rounds = [...store.slotRounds].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const filtered = query ? rounds.filter((round) => round.id.toLowerCase().includes(query.toLowerCase())) : rounds;
+  const totalStake = rounds.reduce((sum, round) => sum + (round.chargedAmount ?? round.stake), 0);
+  const totalWin = rounds.reduce((sum, round) => sum + round.totalWin, 0);
+  return {
+    settings: clone(store.slotSettings),
+    rounds: clone(filtered.slice(0, 100)),
+    analytics: {
+      rounds: rounds.length, totalStake, totalWin,
+      actualRtp: totalStake > 0 ? totalWin / totalStake : 0,
+      bonusFrequency: rounds.length > 0 ? rounds.filter((round) => round.bonusTriggered).length / rounds.length : 0,
+      biggestWin: rounds.reduce((max, round) => Math.max(max, round.totalWin), 0),
+    },
+  };
+}
+
+export function updateSweetLemonzaSettings(input: { enabled: boolean; spinsEnabled: boolean; lemonBoostEnabled: boolean; bonusBuyEnabled: boolean; allowedBets: number[] }): SlotOperationalSettings {
+  const allowedBets = [...new Set(input.allowedBets)].filter((value) => Number.isInteger(value) && value > 0).sort((a, b) => a - b);
+  if (!allowedBets.length || allowedBets.some((value) => !LEMONZA_BETS.includes(value as typeof LEMONZA_BETS[number]))) throw new Error("INVALID_BETS");
+  store.slotSettings = {
+    gameId: "sweet-lemonza", enabled: Boolean(input.enabled), spinsEnabled: Boolean(input.spinsEnabled),
+    allowedBets, minBet: allowedBets[0], maxBet: allowedBets.at(-1)!, lemonBoostEnabled: Boolean(input.lemonBoostEnabled), bonusBuyEnabled: Boolean(input.bonusBuyEnabled),
+  };
+  return clone(store.slotSettings);
 }

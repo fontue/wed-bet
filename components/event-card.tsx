@@ -29,7 +29,7 @@ export function EventCard({ event, featured = false }: { event: MarketEvent; fea
             <div key={outcome.id} className="flex items-center gap-2 text-sm">
               <span className="min-w-0 flex-1 truncate font-bold text-[#36584b]">{outcome.title}</span>
               <span className="text-xs text-[#83897d]">{formatProbability(outcome.probabilityBps)}</span>
-              <span className="min-w-14 rounded-lg bg-[#174b38]/7 px-2 py-1 text-center font-black text-[#174b38]">×{formatCoefficient(outcome.coefficient)}</span>
+              <span className="min-w-14 rounded-lg bg-[#174b38]/7 px-2 py-1 text-center font-black text-[#174b38]">X{formatCoefficient(outcome.coefficient)}</span>
             </div>
           ))}
           {outcomes.length > (featured ? 4 : 3) && <p className="text-xs font-bold text-[#a07831]">+ ещё {outcomes.length - 3} исход</p>}

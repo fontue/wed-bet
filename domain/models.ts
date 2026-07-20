@@ -1,3 +1,5 @@
+import type { LemonzaMode, LemonzaRoundResult } from "./slots/sweet-lemonza/types";
+
 export type UserRole = "USER" | "ADMIN";
 export type UserStatus = "ACTIVE" | "BLOCKED";
 export type EventStatus = "DRAFT" | "OPEN" | "CLOSED" | "RESOLVED" | "CANCELLED";
@@ -58,6 +60,38 @@ export interface Duel {
   declinedAt?: string;
   cancelledAt?: string;
   expiredAt?: string;
+}
+
+export interface SlotRound {
+  id: string;
+  gameId: "sweet-lemonza";
+  mathVersion: string;
+  userId: string;
+  stake: number;
+  mode: LemonzaMode;
+  chargedAmount: number;
+  baseWin: number;
+  scatterWin: number;
+  bonusWin: number;
+  totalWin: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  bonusTriggered: boolean;
+  maxMultiplier: number;
+  idempotencyKey: string;
+  result: LemonzaRoundResult;
+  createdAt: string;
+}
+
+export interface SlotOperationalSettings {
+  gameId: "sweet-lemonza";
+  enabled: boolean;
+  spinsEnabled: boolean;
+  allowedBets: number[];
+  minBet: number;
+  maxBet: number;
+  lemonBoostEnabled: boolean;
+  bonusBuyEnabled: boolean;
 }
 
 export interface User {
@@ -124,6 +158,8 @@ export type TransactionType =
   | "DUEL_STAKE"
   | "DUEL_WIN"
   | "DUEL_REFUND"
+  | "SLOT_BET"
+  | "SLOT_WIN"
   | "ADMIN_ADJUSTMENT";
 
 export interface WalletTransaction {

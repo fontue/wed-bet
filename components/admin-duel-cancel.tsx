@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClientRequestId } from "@/lib/client-id";
 
 export function AdminDuelCancel({ duelId }: { duelId: string }) {
   const router = useRouter();
@@ -9,7 +10,7 @@ export function AdminDuelCancel({ duelId }: { duelId: string }) {
   async function cancel() {
     if (!window.confirm("Отменить ожидающую дуэль и вернуть инициатору 200 лир?")) return;
     setBusy(true);
-    const response = await fetch(`/api/admin/duels/${duelId}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "cancel", idempotencyKey: crypto.randomUUID() }) });
+    const response = await fetch(`/api/admin/duels/${duelId}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "cancel", idempotencyKey: createClientRequestId() }) });
     setBusy(false);
     if (!response.ok) { const body = await response.json(); window.alert(body.error); return; }
     router.refresh();

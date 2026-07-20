@@ -65,7 +65,7 @@ export const seedTransactions: WalletTransaction[] = [
 export const seedBonusDefinitions: BonusDefinition[] = [
   { id: "bonus-100", label: "+100 лир", kind: "LIRA", value: 100, weight: 22, color: "#f4c95d", validityMinutes: 0, active: true },
   { id: "bonus-free", label: "Ставка 150", kind: "FREE_BET", value: 150, weight: 16, color: "#1f5a45", validityMinutes: 180, active: true },
-  { id: "bonus-x15", label: "Прибыль ×1,5", kind: "MULTIPLIER", value: 150, weight: 10, color: "#e8a84c", validityMinutes: 180, active: true },
+  { id: "bonus-x15", label: "Прибыль X1,5", kind: "MULTIPLIER", value: 150, weight: 10, color: "#e8a84c", validityMinutes: 180, active: true },
   { id: "bonus-back", label: "Возврат 30%", kind: "CASHBACK", value: 30, weight: 14, color: "#92a96f", validityMinutes: 180, active: true },
   { id: "bonus-50", label: "+50 лир", kind: "LIRA", value: 50, weight: 24, color: "#f7df96", validityMinutes: 0, active: true },
   { id: "bonus-none", label: "Неаполь плачет", kind: "NONE", value: 0, weight: 14, color: "#eee5d3", validityMinutes: 0, active: true },

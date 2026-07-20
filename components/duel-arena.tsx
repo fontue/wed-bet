@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Duel, DuelGame, User } from "@/domain/models";
 import { DUEL_GAME_META, DUEL_POT, DUEL_STAKE } from "@/domain/duels";
 import { formatLira } from "@/domain/market";
+import { createClientRequestId } from "@/lib/client-id";
 import { DuelResultView } from "./duel-result";
 
 interface DuelStateDto {
@@ -67,7 +68,7 @@ export function DuelArena({ currentUser, initialBalance, initialState }: { curre
     if (!requireOnline() || !opponentId) return;
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/api/duels", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ opponentId, game, idempotencyKey: crypto.randomUUID() }) });
+      const response = await fetch("/api/duels", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ opponentId, game, idempotencyKey: createClientRequestId() }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       setBalance(body.balance); setCreateOpen(false); setMessage(`Вызов для ${userName(opponentId)} отправлен. ${formatLira(DUEL_STAKE)} зарезервированы.`); await refresh();
@@ -79,7 +80,7 @@ export function DuelArena({ currentUser, initialBalance, initialState }: { curre
     if (!requireOnline()) return;
     setBusy(true); setMessage("");
     try {
-      const response = await fetch(`/api/duels/${duel.id}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, idempotencyKey: crypto.randomUUID() }) });
+      const response = await fetch(`/api/duels/${duel.id}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, idempotencyKey: createClientRequestId() }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       if (typeof body.balance === "number") setBalance(body.balance);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createDevelopmentSession, exchangeLoginToken } from "@/infrastructure/mock/store";
 import { SESSION_COOKIE } from "@/lib/auth";
+import { requestUsesHttps } from "@/lib/request-url";
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +10,15 @@ export async function POST(request: Request) {
     const isDevelopmentDemo = process.env.NODE_ENV !== "production" && ["guest-demo", "misha-demo", "admin-demo"].includes(body.token);
     const { session, user } = isDevelopmentDemo ? createDevelopmentSession(body.token) : exchangeLoginToken(body.token);
     const response = NextResponse.json({ user: { id: user.id, displayName: user.displayName, role: user.role } });
-    response.cookies.set(SESSION_COOKIE, session.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", expires: new Date(session.expiresAt) });
+    response.cookies.set(SESSION_COOKIE, session.id, {
+      httpOnly: true,
+      sameSite: "lax",
+      // A production build is often tested from a phone over http://<LAN-IP>.
+      // Secure cookies must follow the actual public protocol or mobile browsers discard them.
+      secure: requestUsesHttps(request),
+      path: "/",
+      expires: new Date(session.expiresAt),
+    });
     return response;
   } catch (error) {
     const message = error instanceof Error && error.message === "ACCOUNT_BLOCKED" ? "Аккаунт заблокирован" : "Ссылка недействительна или уже использована";

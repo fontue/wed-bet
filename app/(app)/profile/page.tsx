@@ -3,7 +3,7 @@ import { listTransactions } from "@/infrastructure/mock/store";
 import { currentUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
 
-const typeName: Record<string, string> = { INITIAL_BALANCE: "Стартовый баланс", BET: "Ставка", WIN: "Выигрыш", REFUND: "Возврат", BONUS: "Бонус", CASHBACK: "Компенсация", DUEL_STAKE: "Взнос в дуэль", DUEL_WIN: "Победа в дуэли", DUEL_REFUND: "Возврат дуэли", ADMIN_ADJUSTMENT: "Корректировка" };
+const typeName: Record<string, string> = { INITIAL_BALANCE: "Стартовый баланс", BET: "Ставка", WIN: "Выигрыш", REFUND: "Возврат", BONUS: "Бонус", CASHBACK: "Компенсация", DUEL_STAKE: "Взнос в дуэль", DUEL_WIN: "Победа в дуэли", DUEL_REFUND: "Возврат дуэли", SLOT_BET: "Spin Sweet Lemonza", SLOT_WIN: "Выигрыш Sweet Lemonza", ADMIN_ADJUSTMENT: "Корректировка" };
 export default async function ProfilePage() {
   const user = await currentUser(); if (!user) return null;
   const transactions = listTransactions(user.id);

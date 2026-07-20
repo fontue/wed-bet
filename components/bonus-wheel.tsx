@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { BonusDefinition, BonusSpin, UserBonus } from "@/domain/models";
+import { createClientRequestId } from "@/lib/client-id";
 
 export function BonusWheel({ definitions, initialBonuses, initialSpins, initialNextSpinAt, initialServerTime }: { definitions: BonusDefinition[]; initialBonuses: UserBonus[]; initialSpins: BonusSpin[]; initialNextSpinAt: string; initialServerTime: number }) {
   const [bonuses, setBonuses] = useState(initialBonuses);
@@ -20,7 +21,7 @@ export function BonusWheel({ definitions, initialBonuses, initialSpins, initialN
 
   async function spin() {
     setSpinning(true); setResult(undefined); setError("");
-    const key = crypto.randomUUID();
+    const key = createClientRequestId();
     try {
       const response = await fetch("/api/bonuses/spin", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idempotencyKey: key }) });
       const body = await response.json(); if (!response.ok) throw new Error(body.error);

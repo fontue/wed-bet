@@ -1,0 +1,11 @@
+"use client";
+import { useState } from "react";
+import type { SlotOperationalSettings } from "@/domain/models";
+import { LEMONZA_BETS } from "@/domain/slots/sweet-lemonza/config";
+
+export function AdminLemonzaSettings({ initial }: { initial: SlotOperationalSettings }) {
+  const [settings,setSettings]=useState(initial),[message,setMessage]=useState("");
+  async function save(){const response=await fetch("/api/admin/slots/sweet-lemonza",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(settings)});setMessage(response.ok?"Настройки сохранены":"Не удалось сохранить");}
+  const toggle=(key:"enabled"|"spinsEnabled"|"lemonBoostEnabled"|"bonusBuyEnabled")=>setSettings((value)=>({...value,[key]:!value[key]}));
+  return <section className="card p-5"><h2 className="serif text-xl font-bold">Операционные настройки</h2><p className="mt-1 text-xs text-[#748078]">Математика имеет версию и здесь не редактируется.</p><div className="mt-4 space-y-2">{[["enabled","Игра видна"],["spinsEnabled","Spin разрешён"],["lemonBoostEnabled","Lemon Boost"],["bonusBuyEnabled","Покупка бонуса"]].map(([key,label])=><label key={key} className="flex items-center justify-between rounded-xl bg-[#174b38]/5 p-3 text-sm font-bold"><span>{label}</span><input type="checkbox" className="size-5 accent-[#174b38]" checked={settings[key as keyof SlotOperationalSettings] as boolean} onChange={()=>toggle(key as "enabled"|"spinsEnabled"|"lemonBoostEnabled"|"bonusBuyEnabled")}/></label>)}</div><p className="mt-5 text-xs font-extrabold uppercase tracking-wider">Доступные ставки</p><div className="mt-2 flex flex-wrap gap-2">{LEMONZA_BETS.map((bet)=><label key={bet} className="rounded-full bg-[#174b38]/6 px-3 py-2 text-xs font-bold"><input className="mr-2 accent-[#174b38]" type="checkbox" checked={settings.allowedBets.includes(bet)} onChange={(event)=>setSettings((value)=>({...value,allowedBets:event.target.checked?[...value.allowedBets,bet].sort((a,b)=>a-b):value.allowedBets.filter((item)=>item!==bet)}))}/>{bet}</label>)}</div><button className="btn-primary mt-5 w-full" onClick={()=>void save()}>Сохранить</button>{message&&<p className="mt-3 text-center text-xs font-bold">{message}</p>}</section>;
+}

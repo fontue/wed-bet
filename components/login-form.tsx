@@ -28,9 +28,9 @@ export function LoginForm({ token, showDemo }: { token?: string; showDemo: boole
 
   return (
     <div className="space-y-4">
-      <form onSubmit={(event) => { event.preventDefault(); void login(value); }} className="space-y-3">
+      <form suppressHydrationWarning onSubmit={(event) => { event.preventDefault(); void login(value); }} className="space-y-3">
         <label className="block text-sm font-bold text-[#36594b]">Код из персональной карточки</label>
-        <input className="input" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Вставьте одноразовый токен" autoComplete="one-time-code" />
+        <input suppressHydrationWarning className="input" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Вставьте одноразовый токен" autoComplete="one-time-code" />
         <button className="btn-primary w-full" disabled={loading}>{loading ? "Открываем двери…" : "Войти на праздник"}</button>
       </form>
       {error && <p className="rounded-xl bg-[#a84735]/10 p-3 text-sm font-bold text-[#963f31]">{error}</p>}
