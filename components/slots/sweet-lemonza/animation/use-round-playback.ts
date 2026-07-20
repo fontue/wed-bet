@@ -51,5 +51,6 @@ export function useRoundPlayback({turbo,reducedMotion,onSound,onComplete}:{turbo
   const reset=useCallback(()=>setView((current)=>({...current,state:"idle",cascadeWin:0,spinWin:0,scatterCount:0,multiplierValues:[],multiplierTotal:0,multiplierWin:0,celebrationWin:0,shake:false,fastForwardSpin:false})),[]);
   const setActiveParticles=useCallback((activeParticles:number)=>setView((current)=>({...current,activeParticles})),[]);
   const recover=useCallback(()=>{if(view.round)settle(view.round,true);},[settle,view.round]);
-  return{view,start,skip,canSkip,continuePhase,requesting,reset,setActiveParticles,recover};
+  const restoreFinal=useCallback((round:SlotRound)=>settle(round,true),[settle]);
+  return{view,start,skip,canSkip,continuePhase,requesting,reset,setActiveParticles,recover,restoreFinal};
 }

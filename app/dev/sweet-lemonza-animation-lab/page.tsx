@@ -3,7 +3,7 @@ import { SweetLemonzaAnimationLab } from "@/components/slots/sweet-lemonza/compo
 import { currentUser } from "@/lib/auth";
 
 export default async function SweetLemonzaAnimationLabPage(){
-  if(process.env.NODE_ENV==="production")notFound();
+  if(process.env.NODE_ENV==="production"&&process.env.E2E_TEST!=="1")notFound();
   const user=await currentUser();
   if(!user)redirect("/login");
   if(user.role!=="ADMIN")redirect("/");

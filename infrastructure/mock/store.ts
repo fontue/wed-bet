@@ -76,7 +76,7 @@ function initialState(): MockState {
     slotRounds: [],
     slotSettings: { gameId: "sweet-lemonza", enabled: true, spinsEnabled: true, allowedBets: [...LEMONZA_BETS], minBet: LEMONZA_BETS[0], maxBet: LEMONZA_BETS.at(-1)!, lemonBoostEnabled: true, bonusBuyEnabled: true },
     dogHouseSettings: { gameId: "casa-degli-sposi", enabled: true, spinsEnabled: true, allowedBets: [...DOG_HOUSE_BETS], minBet: DOG_HOUSE_BETS[0], maxBet: DOG_HOUSE_BETS.at(-1)! },
-    loginTokens: process.env.NODE_ENV === "production" ? [] : [
+    loginTokens: process.env.NODE_ENV === "production" && process.env.E2E_TEST !== "1" ? [] : [
       { id: "lt-guest", userId: "u-sofia", tokenHash: hash("guest-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
       { id: "lt-misha", userId: "u-misha", tokenHash: hash("misha-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
       { id: "lt-admin", userId: "u-admin", tokenHash: hash("admin-demo"), expiresAt: isoAfter(365 * 24 * 60 * 60 * 1000) },
@@ -347,7 +347,7 @@ export function exchangeLoginToken(rawToken: string): { session: Session; user: 
 
 /** Reusable convenience login for local development only. Never called in production. */
 export function createDevelopmentSession(rawToken: string): { session: Session; user: User } {
-  if (process.env.NODE_ENV === "production") throw new Error("DEMO_LOGIN_DISABLED");
+  if (process.env.NODE_ENV === "production" && process.env.E2E_TEST !== "1") throw new Error("DEMO_LOGIN_DISABLED");
   const userId = rawToken === "guest-demo" ? "u-sofia" : rawToken === "misha-demo" ? "u-misha" : rawToken === "admin-demo" ? "u-admin" : undefined;
   if (!userId) throw new Error("INVALID_TOKEN");
   const user = store.users.find((item) => item.id === userId && item.status === "ACTIVE");
@@ -601,6 +601,7 @@ export function getSweetLemonzaState(userId: string) {
   const user = store.users.find((item) => item.id === userId);
   if (!user) throw new Error("USER_NOT_FOUND");
   return {
+    userId,
     game: LEMONZA_GAME,
     settings: clone(store.slotSettings),
     balance: user.balance,
@@ -664,7 +665,7 @@ export function spinSweetLemonza(input: { userId: string; stake: number; mode: L
 export function getDogHouseState(userId:string){
   const user=store.users.find((item)=>item.id===userId);
   if(!user)throw new Error("USER_NOT_FOUND");
-  return{game:DOG_HOUSE_GAME,settings:clone(store.dogHouseSettings),balance:user.balance,history:clone(store.slotRounds.filter((round):round is Extract<AnySlotRound,{gameId:"casa-degli-sposi"}>=>round.gameId==="casa-degli-sposi"&&round.userId===userId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,20))};
+  return{userId,game:DOG_HOUSE_GAME,settings:clone(store.dogHouseSettings),balance:user.balance,history:clone(store.slotRounds.filter((round):round is Extract<AnySlotRound,{gameId:"casa-degli-sposi"}>=>round.gameId==="casa-degli-sposi"&&round.userId===userId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,20))};
 }
 
 export function spinDogHouse(input:{userId:string;stake:number;idempotencyKey:string}){

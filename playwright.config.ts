@@ -7,7 +7,7 @@ export default defineConfig({
   timeout:45_000,
   expect:{timeout:8_000,toHaveScreenshot:{maxDiffPixelRatio:0.03}},
   reporter:"line",
-  use:{...devices["Desktop Chrome"],baseURL:"http://127.0.0.1:3100",trace:"retain-on-failure",screenshot:"only-on-failure"},
-  webServer:{command:"npm run dev -- -p 3100",url:"http://127.0.0.1:3100/login",reuseExistingServer:true,timeout:120_000},
+  use:{...devices["Desktop Chrome"],baseURL:"http://127.0.0.1:3217",trace:"retain-on-failure",screenshot:"only-on-failure"},
+  webServer:{command:"npm run build:e2e && npm run start:e2e",url:"http://127.0.0.1:3217/login",reuseExistingServer:false,timeout:240_000,stdout:"pipe",stderr:"pipe"},
   projects:[{name:"chromium",use:{...devices["Desktop Chrome"]}}],
 });
