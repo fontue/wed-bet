@@ -1,4 +1,4 @@
-const VERSION = "wedbet-v2";
+const VERSION = "wedbet-v3-slots-production";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const STATIC_ASSETS = ["/offline", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];

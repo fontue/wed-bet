@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { gameId?: string; stake?: number; mode?: "STANDARD" | "LEMON_BOOST" | "BONUS_BUY"; idempotencyKey?: string };
     if (body.gameId !== "sweet-lemonza" || !body.stake || !body.idempotencyKey) return NextResponse.json({ error: "Неполные данные Spin" }, { status: 400 });
-    return NextResponse.json(spinSweetLemonza({ userId: user.id, stake: body.stake, mode: body.mode ?? "STANDARD", idempotencyKey: body.idempotencyKey }), { status: 201 });
+    return NextResponse.json(spinSweetLemonza({ userId: user.id, stake: body.stake, mode: body.mode ?? "STANDARD", idempotencyKey: body.idempotencyKey }), { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const code = error instanceof Error ? error.message : "UNKNOWN";
     const [message, status] = errors[code] ?? ["Не удалось выполнить Spin", 400];

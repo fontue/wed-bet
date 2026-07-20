@@ -13,9 +13,11 @@
     "test:duels": "tsx tests/duels.test.ts",
     "test:slots": "tsx tests/sweet-lemonza.test.ts",
     "test:animations": "tsx tests/sweet-lemonza-animation.test.ts",
-    "test": "npm run test:duels && npm run test:slots && npm run test:animations && npm run test:dog-house && npm run test:dog-house-animations",
+    "test": "npm run test:duels && npm run test:slots && npm run test:animations && npm run test:dog-house && npm run test:dog-house-animations && npm run test:slot-production",
     "test:dog-house": "tsx tests/dog-house.test.ts",
     "test:dog-house-animations": "tsx tests/dog-house-animation.test.ts",
+    "test:slot-production": "tsx tests/slot-production.test.ts",
+    "test:e2e": "playwright test",
     "simulate:sweet-lemonza": "tsx scripts/simulate-sweet-lemonza.ts",
     "simulate:dog-house": "tsx scripts/simulate-dog-house.ts"
   },
@@ -27,6 +29,7 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
