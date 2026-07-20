@@ -1,61 +1,83 @@
 # Sweet Lemonza — математический отчёт
 
-Дата финальной симуляции: 19 июля 2026 года. Версия математики: `sweet-lemonza-v2`.
+Дата последней симуляции: 20 июля 2026 года. Актуальная версия математики: `sweet-lemonza-v5`.
 
-Это самостоятельная модель Pay Anywhere для свадебной виртуальной валюты. Результаты не описывают и не воспроизводят математику какой-либо сторонней игры. RTP — долгосрочная статистическая оценка, а не обещание возврата в короткой сессии.
+Модель использует только виртуальные свадебные лиры. RTP — долгосрочная статистическая оценка, а не обещание возврата в отдельной сессии.
 
-## Финальные результаты
+## Сводка режимов
 
-| Режим | Платных раундов | Seed | RTP | Hit frequency | Частота бонуса | Максимальный выигрыш |
-|---|---:|---|---:|---:|---:|---:|
-| Standard | 5 000 000 | `sweet-lemonza-v2-final-standard` | 95,7663% | 33,920% | 1 / 1 869,9 | 398,45× |
-| Lemon Boost | 5 000 000 | `sweet-lemonza-v2-final-boost-1220-b` | 96,5576% | 32,848% | 1 / 88,4 | 1 296,25× |
-| Bonus buy | 2 000 000 | `sweet-lemonza-v2-final-buy-1204` | 95,9620% | 87,776% | всегда 10 FS | 4 625,00× |
+| Режим | Раундов | RTP | Standard error | Примечание |
+|---|---:|---:|---:|---|
+| Standard | 5 000 000 | 95,7663% | 0,1479 п.п. | Конфигурация не менялась в v5 |
+| Lemon Boost | 5 000 000 | 96,5576% | 0,2502 п.п. | Конфигурация не менялась в v5 |
+| Bonus Buy v5 | 5 000 000 | **96,6668%** | **0,0821 п.п.** | Цена 103X, бонус гарантирован |
 
-Стандартная ошибка оценки RTP: 0,1479 п.п. для Standard, 0,2502 п.п. для Boost и 0,1320 п.п. для bonus-buy. Boost на этой конкретной выборке выше верхней целевой границы на 0,0576 п.п., что меньше его оценённой стандартной ошибки.
+Ориентировочный 95% интервал финальной оценки Bonus Buy: 96,51–96,83%. Standard и Lemon Boost приведены по прежним финальным пяти-миллионным прогонам, поскольку их weights, стоимость и payout configuration в v5 не изменялись.
 
-Вклад в RTP Standard: base game 94,7922%, Scatter 0,1771%, бонус 0,7969%. Среднее число каскадов — 0,4759, максимум — 10. Доля пустых Spin — 66,08%; доля выплат 100× и выше — 0,0014%.
+## Изменение Bonus Buy v5
 
-Вклад в RTP Lemon Boost: base game 74,293%, Scatter 4,514%, бонус 17,751%. Среднее число каскадов — 0,455, максимум — 12. Доля пустых Spin — 67,1517%; доля выплат 100× и выше — 0,0391%.
+Первичный аудит `sweet-lemonza-v4` на 1 000 000 покупок показал средний возврат около 99,20X при цене 100X. Минимально рискованное изменение:
 
-## Таблица выплат
+- цена покупки повышена со 100X до **103X базовой ставки**;
+- `bonusBuySymbolWeights` не менялись;
+- multiplier chance 12,5% не менялся;
+- guaranteed trigger и стартовые 10 фриспинов сохранены;
+- natural-trigger free spins Standard/Boost не менялись.
 
-Все значения — множители базовой ставки.
+Расчётная цена: `expected payout / target RTP = 99,20X / 0,963 ≈ 103X`.
 
-| Символ | 8–9 | 10–11 | 12+ |
-|---|---:|---:|---:|
-| Лимончелло | 10,00× | 25,00× | 50,00× |
-| Кольца | 2,50× | 10,00× | 25,00× |
-| Вино (`WINE`) | 2,00X | 5,00X | 15,00X |
-| Просекко | 1,50× | 2,00× | 12,00× |
-| Торт | 1,00× | 1,50× | 10,00× |
-| Букет | 0,80× | 1,20× | 8,00× |
-| Лимон | 0,50× | 1,00× | 5,00× |
-| Виноград | 0,40× | 0,90× | 4,00× |
-| Оливки | 0,25× | 0,75× | 2,00× |
+## Финальная симуляция Bonus Buy
 
-## Финальные веса
+- Seed: `bonus-buy-v5-final`
+- Покупок: 5 000 000
+- Базовая ставка: 100 лир
+- Цена покупки: 10 300 лир
+- Total wager: 51 500 000 000 лир
+- Total payout: 49 783 419 980 лир
+- RTP: 96,6668%
+- Средний payout: 99,2439X базовой ставки
+- Median: 26,20X
+- P95: 469,65X
+- P99: 858,60X
+- P99.9: 1 659,65X
+- Максимум: 5 839,25X
+- Среднее число free spins: 10,1795
+- Retrigger frequency: 3,4718%
+- Максимальная сумма multiplier: 239X
 
-`baseGameSymbolWeights`: Limoncello 1191, Rings 650, Wine bottle (`WINE`) 720, Prosecco 800, Cake 900, Bouquet 1000, Lemon 559, Grapes 1440, Olives 1740, Scatter 100.
+### Распределение payout относительно базовой ставки
 
-`lemonBoostSymbolWeights`: Limoncello 1220, Rings 650, Wine bottle (`WINE`) 720, Prosecco 800, Cake 900, Bouquet 1000, Lemon 530, Grapes 1440, Olives 1740, Scatter 240. Вероятность Scatter на отдельной позиции примерно в 2,35 раза выше Standard; стоимость раунда — 125% базовой ставки.
+| Диапазон | Доля покупок |
+|---|---:|
+| 0–25X | 48,5725% |
+| 25–50X | 19,2737% |
+| 50–100X | 9,6506% |
+| 100–250X | 9,0631% |
+| 250X+ | 13,4401% |
 
-`freeSpinsSymbolWeights`: Limoncello 43, Rings 45, Wine bottle (`WINE`) 47, Prosecco 49, Cake 51, Bouquet 53, Lemon 55, Grapes 57, Olives 59, Scatter 10. Вероятность появления Multiplier проверяется отдельно: 5,5% в Standard-фриспинах, 9% в Boost и 12,5% в bonus-buy.
+Вклад в RTP Bonus Buy: base 0,3135%, Scatter 3,0356%, free spins 93,3177%.
 
-`bonusBuySymbolWeights`: Limoncello 1204, Rings 650, Wine bottle (`WINE`) 720, Prosecco 800, Cake 900, Bouquet 1000, Lemon 546, Grapes 1440, Olives 1740, Scatter 100.
+## Конфигурации
 
-Веса значений Multiplier: 2×/300, 3×/220, 4×/190, 5×/160, 6×/125, 8×/90, 10×/70, 12×/55, 15×/40, 20×/25, 25×/12, 50×/4, 100×/1.
+`baseGameSymbolWeights`: Limoncello 1191, Rings 650, Wine 720, Prosecco 800, Cake 900, Bouquet 1000, Lemon 559, Grapes 1440, Olives 1740, Scatter 100.
 
-## Ограничения измерения
+`lemonBoostSymbolWeights`: Limoncello 1220, Rings 650, Wine 720, Prosecco 800, Cake 900, Bouquet 1000, Lemon 530, Grapes 1440, Olives 1740, Scatter 240. Стоимость — 125% базовой ставки.
 
-- Редкие большие выигрыши повышают дисперсию; повторная симуляция с другим seed даст немного иной RTP.
-- Из-за нового правила «4+ Scatter запускают бонус» и необходимости приблизительно удвоить Scatter в Boost частота бонуса Standard ниже первоначального ориентира 1/120–220. Одновременно удержать этот ориентир, одинаковую Scatter-таблицу, Boost +25% и RTP около 96% математически не удалось без изменения точной механики.
-- Bonus-buy проверен на 2 млн покупок; Standard и Boost — на 5 млн платных раундов каждый.
+`freeSpinsSymbolWeights`: Limoncello 43, Rings 45, Wine 47, Prosecco 49, Cake 51, Bouquet 53, Lemon 55, Grapes 57, Olives 59, Scatter 10.
+
+`bonusBuySymbolWeights`: Limoncello 1204, Rings 650, Wine 720, Prosecco 800, Cake 900, Bouquet 1000, Lemon 546, Grapes 1440, Olives 1740, Scatter 100.
+
+Multiplier chance: Standard 5,5%, Boost 9%, Bonus Buy 12,5%. Значения multiplier: 2X, 3X, 4X, 5X, 6X, 8X, 10X, 12X, 15X, 20X, 25X, 50X и 100X с отдельными весами из production config.
+
+## Ограничения
+
+- Редкие крупные выигрыши повышают дисперсию; другой seed даст немного отличающуюся оценку.
+- Новая `mathVersion` записывается только в новые раунды. Существующие v2/v4 result JSON не переписываются и остаются читаемыми.
+- В v5 менялась только цена Bonus Buy. Таблица выплат и режимы Standard/Boost не корректировались.
 
 ## Повторный запуск
 
 ```bash
-npm run simulate:sweet-lemonza -- --spins=5000000 --seed=sweet-lemonza-v2-final-standard --json
-npm run simulate:sweet-lemonza -- --spins=5000000 --seed=sweet-lemonza-v2-final-boost-1220-b --mode=boost --json
-npm run simulate:sweet-lemonza -- --spins=2000000 --seed=sweet-lemonza-v2-final-buy-1204 --mode=bonus-buy --json
+npm run simulate:sweet-lemonza -- --mode=bonus-buy --spins=1000000 --seed=bonus-buy-v5-primary --stake=100 --json
+npm run simulate:sweet-lemonza -- --mode=bonus-buy --spins=5000000 --seed=bonus-buy-v5-final --stake=100 --json
 ```

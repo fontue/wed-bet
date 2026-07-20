@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./slot-polish.css";
 
 :root {
   --cream: #f7f1e3;
