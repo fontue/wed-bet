@@ -1,0 +1,2 @@
+export type DogHouseSoundEvent="spin-press"|"reels-start"|"reel-stop"|"wild-land"|"wild-2x"|"wild-3x"|"line-win"|"line-multiplier"|"win-collect"|"paw-1"|"paw-2"|"anticipation"|"paw-3"|"bonus-trigger"|"token-flip"|"token-add"|"free-spins-awarded"|"free-spin-start"|"sticky-lock"|"sticky-react"|"big-win"|"bonus-summary";
+

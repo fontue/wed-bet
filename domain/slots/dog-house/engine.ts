@@ -33,9 +33,10 @@ export function evaluateDogHouseLines(grid:DogHouseCell[],stake:number):DogHouse
     for(const position of positions){const cell=grid[position];if(cell.symbol!==first&&cell.symbol!=="WILD")break;matched.push(position);}
     if(matched.length<3)return;
     const count=Math.min(5,matched.length) as 3|4|5,payoutHundredths=DOG_HOUSE_SYMBOL_META[first].payouts[count-3];
-    const wilds=matched.map((position)=>grid[position]).filter((cell)=>cell.symbol==="WILD");
+    const wildPositions=matched.filter((position)=>grid[position].symbol==="WILD"),wilds=wildPositions.map((position)=>grid[position]);
     const wildMultiplier=wilds.length?wilds.reduce((sum,cell)=>sum+(cell.multiplier??1),0):1;
-    wins.push({line:line+1,symbol:first,count,positions:matched,payoutHundredths,wildMultiplier,payout:Math.floor(stake*payoutHundredths*wildMultiplier/100)});
+    const basePayout=Math.floor(stake*payoutHundredths/100);
+    wins.push({line:line+1,symbol:first,count,positions:matched,payoutHundredths,basePayout,wildPositions,wildMultipliers:wilds.map((cell)=>cell.multiplier).filter((value):value is 2|3=>typeof value==="number"),wildMultiplier,payout:basePayout*wildMultiplier});
   });
   return wins;
 }
@@ -54,5 +55,6 @@ export function runDogHouseRound(stake:number,rng:DogHouseRng,{includeBonus=true
   const awardedFreeSpins=freeSpinReveal.reduce((sum,value)=>sum+value,0),freeSpins:DogHouseSpin[]=[],sticky=new Map<number,2|3>();
   if(includeBonus&&bonusTriggered)for(let index=0;index<awardedFreeSpins;index+=1)freeSpins.push(runSpin(rng,stake,true,sticky,(index+1)*DOG_HOUSE_GRID_SIZE));
   const baseGamePayout=base.payout,bonusPayout=freeSpins.reduce((sum,spin)=>sum+spin.payout,0),uncapped=baseGamePayout+bonusScatterPayout+bonusPayout,cap=stake*DOG_HOUSE_MAX_WIN_X,totalPayout=Math.min(uncapped,cap);
-  return{mathVersion:DOG_HOUSE_MATH_VERSION,stake,chargedAmount:stake,base,bonusTriggered,bonusScatterPayout,freeSpinReveal,awardedFreeSpins,freeSpins,baseGamePayout,bonusPayout,totalPayout,maxMultiplier:Math.max(1,...base.wins.map((win)=>win.wildMultiplier),...freeSpins.flatMap((spin)=>spin.wins.map((win)=>win.wildMultiplier))),maxWinCapped:uncapped>cap};
+  const maxLineMultiplier=Math.max(1,...base.wins.map((win)=>win.wildMultiplier),...freeSpins.flatMap((spin)=>spin.wins.map((win)=>win.wildMultiplier))),stickyWildCount=freeSpins.at(-1)?.stickyWilds.length??0,bestFreeSpin=Math.max(0,...freeSpins.map((spin)=>spin.payout));
+  return{mathVersion:DOG_HOUSE_MATH_VERSION,stake,chargedAmount:stake,base,bonusTriggered,bonusScatterPayout,freeSpinReveal,awardedFreeSpins,freeSpins,baseGamePayout,bonusPayout,totalPayout,maxMultiplier:maxLineMultiplier,maxLineMultiplier,stickyWildCount,bestFreeSpin,maxWinCapped:uncapped>cap};
 }

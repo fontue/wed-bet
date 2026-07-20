@@ -1,0 +1,9 @@
+import type { DogHouseSpeed } from "./animation-types";
+
+export interface DogHouseTimings{buttonPress:number;reelStartStagger:number;acceleration:number;minimumSpin:number;reelStopGap:number;reelDeceleration:number;reelBounce:number;evaluationPause:number;lineHighlight:number;lineValueHold:number;winCollect:number;anticipationExtra:number;wildLand:number;stickyLock:number;bonusTrigger:number;bonusTokenReveal:number;freeSpinsIntro:number;bigWinCount:number;bonusSummary:number}
+export const NORMAL_TIMINGS:DogHouseTimings={buttonPress:90,reelStartStagger:45,acceleration:160,minimumSpin:520,reelStopGap:150,reelDeceleration:300,reelBounce:130,evaluationPause:140,lineHighlight:520,lineValueHold:400,winCollect:420,anticipationExtra:700,wildLand:300,stickyLock:480,bonusTrigger:1100,bonusTokenReveal:330,freeSpinsIntro:900,bigWinCount:1700,bonusSummary:1200};
+export const QUICK_TIMINGS:DogHouseTimings={buttonPress:60,reelStartStagger:24,acceleration:90,minimumSpin:300,reelStopGap:80,reelDeceleration:170,reelBounce:80,evaluationPause:70,lineHighlight:280,lineValueHold:190,winCollect:230,anticipationExtra:420,wildLand:180,stickyLock:270,bonusTrigger:700,bonusTokenReveal:180,freeSpinsIntro:560,bigWinCount:1050,bonusSummary:800};
+export const TURBO_TIMINGS:DogHouseTimings={buttonPress:45,reelStartStagger:12,acceleration:60,minimumSpin:160,reelStopGap:45,reelDeceleration:100,reelBounce:55,evaluationPause:30,lineHighlight:150,lineValueHold:100,winCollect:140,anticipationExtra:250,wildLand:120,stickyLock:180,bonusTrigger:500,bonusTokenReveal:100,freeSpinsIntro:380,bigWinCount:650,bonusSummary:500};
+export const REDUCED_TIMINGS:DogHouseTimings={...TURBO_TIMINGS,minimumSpin:220,reelDeceleration:120,reelBounce:20,lineHighlight:180,bonusTokenReveal:130,freeSpinsIntro:420,bigWinCount:550};
+export const timingsFor=(speed:DogHouseSpeed,reduced=false)=>reduced?REDUCED_TIMINGS:speed==="turbo"?TURBO_TIMINGS:speed==="quick"?QUICK_TIMINGS:NORMAL_TIMINGS;
+

@@ -1,6 +1,6 @@
 import type { DogHouseRegularSymbol, DogHouseSymbol } from "./types";
 
-export const DOG_HOUSE_MATH_VERSION="casa-degli-sposi-v1";
+export const DOG_HOUSE_MATH_VERSION="casa-degli-sposi-v2";
 export const DOG_HOUSE_COLUMNS=5;
 export const DOG_HOUSE_ROWS=3;
 export const DOG_HOUSE_GRID_SIZE=15;
@@ -44,7 +44,7 @@ export const DOG_HOUSE_FREE_WEIGHTS:Record<DogHouseRegularSymbol,number>={
 };
 export const DOG_HOUSE_WILD_WEIGHT=280;
 export const DOG_HOUSE_FREE_WILD_WEIGHT=120;
-export const DOG_HOUSE_BONUS_WEIGHT=501;
+export const DOG_HOUSE_BONUS_WEIGHT=500;
 export const DOG_HOUSE_FREE_SPIN_REVEAL_WEIGHTS=[{value:1,weight:62},{value:2,weight:30},{value:3,weight:8}] as const;
 export const DOG_HOUSE_REGULAR_SYMBOLS=DOG_HOUSE_SYMBOLS.map((item)=>item.id);
 export const DOG_HOUSE_WILD_REELS=new Set([1,2,3]);
