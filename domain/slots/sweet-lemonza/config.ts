@@ -1,16 +1,16 @@
 import type { LemonzaRegularSymbol } from "./types";
 
-export const LEMONZA_MATH_VERSION = "sweet-lemonza-v5";
-export const LEMONZA_CALCULATED_RTP = "Standard 95,77% · Lemon Boost 96,56% · покупка бонуса ≈96,67%";
+export const LEMONZA_MATH_VERSION = "sweet-lemonza-v6";
+export const LEMONZA_CALCULATED_RTP = "Standard 95,77% · Lemon Boost 96,56% · покупка бонуса ≈99,57%";
 export const LEMONZA_COLUMNS = 6;
 export const LEMONZA_ROWS = 5;
 export const LEMONZA_GRID_SIZE = LEMONZA_COLUMNS * LEMONZA_ROWS;
 export const LEMONZA_MAX_CASCADES = 100;
 export const LEMONZA_MAX_FREE_SPINS = 100;
 export const LEMONZA_BOOST_COST_BPS = 12_500;
-// v5 keeps the purchased bonus distribution unchanged and prices its audited
-// ~99.2X expected payout at 103X, targeting a 96–97% Bonus Buy RTP.
-export const LEMONZA_BONUS_BUY_COST_X = 103;
+// v6 restores the original 100X price while keeping the purchased bonus
+// distribution unchanged. All monetary calculations remain integer-only.
+export const LEMONZA_BONUS_BUY_COST_X = 100;
 export const LEMONZA_BONUS_BUY_TRIGGER_SCATTERS = 4;
 // Divisible by four so Lemon Boost costs exactly +25% in integer liras.
 export const LEMONZA_BETS = [20, 40, 100, 200, 500] as const;

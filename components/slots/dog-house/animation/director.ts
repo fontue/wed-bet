@@ -6,7 +6,6 @@ import type { DogHouseAnimationContext, DogHouseAnimationState, DogHouseAnimatio
 
 const bonusOnReel=(spin:DogHouseSpin,reel:number)=>[0,1,2].some((row)=>spin.grid[row*5+reel]?.symbol==="BONUS");
 const celebration=(ratio:number):DogHouseCelebrationTier=>ratio>=100?"FESTA":ratio>=40?"MAGNIFICO":ratio>=15?"GRANDE":"BRAVO";
-const celebrationDuration=(tier:DogHouseCelebrationTier)=>tier==="FESTA"?"festa":tier==="MAGNIFICO"?"magnifico":tier==="GRANDE"?"grande":"bravo" as const;
 
 export function buildDogHouseTimeline(round:DogHouseSlotRound):DogHouseAnimationStep[]{
   const steps:DogHouseAnimationStep[]=[];
@@ -26,7 +25,7 @@ export function buildDogHouseTimeline(round:DogHouseSlotRound):DogHouseAnimation
     spin.wins.forEach((line,lineIndex)=>steps.push({state:"highlighting-line",duration:"lineHighlight",line,lineIndex,...common},{state:"showing-line-win",duration:"lineValueHold",line,lineIndex,...common},{state:"collecting-win",duration:"winCollect",line,lineIndex,...common}));
     if(spin.payout>0)steps.push({state:isFreeSpin?"showing-free-spin-win":"showing-base-win",duration:"evaluationPause",...common});
     const ratio=spin.payout/round.stake;
-    if(ratio>=5&&(!isFreeSpin||ratio>=40)&&(ratio>=100||spinIndex-lastCelebrationSpin>1)){const tier=celebration(ratio);steps.push({state:"showing-big-win",duration:celebrationDuration(tier),celebrationTier:tier,...common});lastCelebrationSpin=spinIndex;}
+    if(ratio>=5&&(!isFreeSpin||ratio>=40)&&(ratio>=100||spinIndex-lastCelebrationSpin>1)){const tier=celebration(ratio);steps.push({state:"showing-big-win",celebrationTier:tier,...common});lastCelebrationSpin=spinIndex;}
   };
   appendSpin(round.result.base,0,false);
   if(round.result.bonusTriggered){
