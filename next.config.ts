@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
-  allowedDevOrigins: ["192.168.31.106"],
+  allowedDevOrigins: ["192.168.31.106", "10.139.116.46"],
   async headers() {
     return [
       {

@@ -4,15 +4,7 @@ import { Logo } from "./logo";
 import { PwaProvider } from "./pwa-provider";
 import { LeaderboardPopup } from "./leaderboard-popup";
 import { BalanceBadge } from "./balance-badge";
-
-const nav = [
-  { href: "/", label: "События", icon: "⌂" },
-  { href: "/bets", label: "Ставки", icon: "◫" },
-  { href: "/bonuses", label: "Бонусы", icon: "✦" },
-  { href: "/slots", label: "Слоты", icon: "◉" },
-  { href: "/duels", label: "Дуэли", icon: "⚔" },
-  { href: "/profile", label: "Профиль", icon: "●" },
-];
+import { BottomNav } from "./bottom-nav";
 
 type Leader = User & { profit: number; wins: number };
 export function AppShell({
@@ -45,20 +37,7 @@ export function AppShell({
         </div>
       </header>
       <main>{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#174b38]/10 bg-[#fffdf8]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:left-1/2 md:mb-4 md:max-w-xl md:-translate-x-1/2 md:rounded-full md:border md:shadow-xl">
-        <div className="mx-auto grid h-[4.4rem] max-w-2xl grid-cols-6">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex flex-col items-center justify-center gap-1 text-[.62rem] font-bold text-[#587064] transition hover:text-[#174b38]"
-            >
-              <span className="text-xl leading-none">{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 }

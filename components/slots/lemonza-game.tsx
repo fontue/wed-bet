@@ -898,7 +898,7 @@ export function SweetLemonzaGame({
       </div>
       <header className="relative z-40 flex items-center justify-between gap-2 px-3 pb-2 pt-[max(.65rem,env(safe-area-inset-top))]">
         <Link
-          href="/slots"
+          href="/casino"
           aria-label="Назад к слотам"
           className="lemonza-round-button"
         >

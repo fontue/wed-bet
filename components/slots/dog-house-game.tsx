@@ -458,7 +458,11 @@ export function DogHouseGame({ initialState }: { initialState: InitialState }) {
     >
       <div className="dogslot-sky" />
       <header className="dogslot-top">
-        <Link href="/slots" aria-label="Назад" className="dogslot-round-button">
+        <Link
+          href="/casino"
+          aria-label="Назад"
+          className="dogslot-round-button"
+        >
           <DogHouseTopIcon name="back" />
         </Link>
         <div>
