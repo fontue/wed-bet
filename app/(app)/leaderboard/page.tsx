@@ -3,5 +3,60 @@ import { getLeaderboard } from "@/infrastructure/mock/store";
 
 export default function LeaderboardPage() {
   const leaders = getLeaderboard();
-  return <div className="page-shell"><div className="text-center"><p className="eyebrow">La classifica</p><h1 className="serif mt-1 text-3xl font-bold">Лига свадебных оракулов</h1><p className="mt-2 text-sm text-[#6e7a71]">Место определяется по реализованной прибыли, а не по размеру подарка.</p></div><section className="mx-auto mt-8 max-w-3xl overflow-hidden rounded-[1.5rem] border border-[#174b38]/10 bg-[#fffdf7] shadow-sm"><div className="grid grid-cols-[2.4rem_1fr_auto] gap-3 bg-[#174b38] px-4 py-3 text-[.65rem] font-extrabold uppercase tracking-wider text-white/70"><span>№</span><span>Гость</span><span>Результат</span></div>{leaders.map((leader, index) => <div key={leader.id} className="grid grid-cols-[2.4rem_1fr_auto] items-center gap-3 border-b border-[#174b38]/7 px-4 py-4 last:border-0"><span className={`serif text-center text-lg font-bold ${index < 3 ? "text-[#c79536]" : "text-[#839087]"}`}>{index + 1}</span><div className="flex min-w-0 items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#174b38] text-xs font-bold text-white">{leader.avatar}</span><div className="min-w-0"><strong className="block truncate">{leader.displayName}</strong><small className="text-[#7a827c]">{leader.team ?? "Без команды"} · побед {leader.wins}</small></div></div><div className="text-right"><strong className={leader.profit >= 0 ? "text-[#2f7251]" : "text-[#a84735]"}>{leader.profit >= 0 ? "+" : ""}{formatLira(leader.profit)}</strong><small className="mt-1 block text-[#7a827c]">баланс {formatLira(leader.balance)}</small></div></div>)}</section></div>;
+  return (
+    <div className="page-shell">
+      <div className="text-center">
+        <p className="eyebrow">La classifica</p>
+        <h1 className="serif mt-1 text-3xl font-bold">
+          Лига свадебных оракулов
+        </h1>
+        <p className="mt-2 text-sm text-[#6e7a71]">
+          Место определяется по реализованной прибыли, а не по размеру подарка.
+        </p>
+      </div>
+      <section className="mx-auto mt-8 max-w-3xl overflow-hidden rounded-[1.5rem] border border-[#174b38]/10 bg-[#fffdf7] shadow-sm">
+        <div className="grid grid-cols-[2.4rem_1fr_auto] gap-3 bg-[#174b38] px-4 py-3 text-[.65rem] font-extrabold uppercase tracking-wider text-white/70">
+          <span>№</span>
+          <span>Гость</span>
+          <span>Результат</span>
+        </div>
+        {leaders.map((leader, index) => (
+          <div
+            key={leader.id}
+            className="grid grid-cols-[2.4rem_1fr_auto] items-center gap-3 border-b border-[#174b38]/7 px-4 py-4 last:border-0"
+          >
+            <span
+              className={`serif text-center text-lg font-bold ${index < 3 ? "text-[#c79536]" : "text-[#839087]"}`}
+            >
+              {index + 1}
+            </span>
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#174b38] text-xs font-bold text-white">
+                {leader.avatar}
+              </span>
+              <div className="min-w-0">
+                <strong className="block truncate">{leader.displayName}</strong>
+                <small className="text-[#7a827c]">
+                  {leader.team ?? "Без команды"} · побед {leader.wins}
+                </small>
+              </div>
+            </div>
+            <div className="text-right">
+              <strong
+                className={
+                  leader.profit >= 0 ? "text-[#2f7251]" : "text-[#a84735]"
+                }
+              >
+                {leader.profit >= 0 ? "+" : ""}
+                {formatLira(leader.profit)}
+              </strong>
+              <small className="mt-1 block text-[#7a827c]">
+                баланс {formatLira(leader.balance)}
+              </small>
+            </div>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
 }

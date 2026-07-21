@@ -2,7 +2,11 @@ import { randomInt } from "node:crypto";
 import type { LemonzaRng } from "./types";
 
 export function createCryptoRng(): LemonzaRng {
-  return { int(maxExclusive) { return randomInt(maxExclusive); } };
+  return {
+    int(maxExclusive) {
+      return randomInt(maxExclusive);
+    },
+  };
 }
 
 function hashSeed(value: string): number {
@@ -18,7 +22,8 @@ export function createSeededRng(seed: string): LemonzaRng {
   let state = hashSeed(seed) || 0x6d2b79f5;
   return {
     int(maxExclusive) {
-      if (!Number.isInteger(maxExclusive) || maxExclusive <= 0) throw new Error("INVALID_RNG_BOUND");
+      if (!Number.isInteger(maxExclusive) || maxExclusive <= 0)
+        throw new Error("INVALID_RNG_BOUND");
       state += 0x6d2b79f5;
       let value = state;
       value = Math.imul(value ^ (value >>> 15), value | 1);

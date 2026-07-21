@@ -3,8 +3,160 @@ import { formatLira } from "@/domain/market";
 import type { DogHouseSlotRound } from "@/domain/models";
 import type { DogHouseLineWin } from "@/domain/slots/dog-house/types";
 
-export function LineWinLabel({line}:{line?:DogHouseLineWin}){if(!line)return null;const multipliers=line.wildMultipliers??[],calculation=multipliers.length>1?`${multipliers.map((value)=>`${value}X`).join(" + ")} = ${line.wildMultiplier}X`:`${line.wildMultiplier}X`;return <div className="dogslot-line-label"><small>Линия {line.line} · база {formatLira(line.basePayout)}</small>{line.wildMultiplier>1&&<span>Wild на линии · {calculation}</span>}<strong>{line.wildMultiplier>1?`${line.wildMultiplier}X · `:""}{formatLira(line.payout)}</strong></div>}
-export function BonusPickGrid({values,revealed,total}:{values:number[];revealed:number;total:number}){return <div className="dogslot-bonus-pick"><span>CASA DEGLI SPOSI</span><h2>La festa dei cani</h2><strong>{total} GIRI GRATIS</strong><div>{values.map((value,index)=><i className={index<revealed?"is-open":""} key={index}><span>🐾</span><b>{index<revealed?value:""}</b></i>)}</div><small>{revealed<values.length?"Открываем свадебные жетоны…":"Фриспины начинаются"}</small></div>}
-export function BigWinOverlay({win,stake,onSkip}:{win:number;stake:number;onSkip:()=>void}){const ratio=win/stake,tier=ratio>=100?"festa":ratio>=40?"magnifico":ratio>=15?"grande":"bravo",label=tier==="festa"?"FESTA DA CANI!":tier==="magnifico"?"MAGNIFICO!":tier==="grande"?"GRANDE!":"BRAVO!";return <button type="button" className={`dogslot-big-win is-${tier}`} onClick={onSkip} aria-label={`${label}. Продолжить`}><span className="dogslot-big-win-title"><span className="dogslot-big-win-shadow" aria-hidden="true">{label}</span><strong>{label}</strong></span><b>{formatLira(win)}</b><small>Нажмите, чтобы продолжить</small></button>}
-export function BonusSummary({round,onContinue}:{round:DogHouseSlotRound;onContinue:()=>void}){return <div className="dogslot-summary-v2"><section><span>La festa è finita</span><h2>Собачья свадьба завершена</h2><div><p><small>Фриспинов</small><b>{round.result.awardedFreeSpins}</b></p><p><small>Sticky Wild</small><b>{round.result.stickyWildCount}</b></p><p><small>Лучший множитель</small><b>{round.result.maxLineMultiplier}X</b></p><p><small>Лучший Spin</small><b>{formatLira(round.result.bestFreeSpin)}</b></p></div><p className="dogslot-summary-prize"><small>Выигрыш бонуса</small><strong>{formatLira(round.bonusWin)}</strong><span>Весь раунд · {formatLira(round.totalWin)}</span></p><button onClick={onContinue}>Забрать выигрыш</button></section></div>}
-export function BonusAnticipation({active}:{active:boolean}){return <div className={`dogslot-anticipation ${active?"is-active":""}`} aria-hidden="true"><div className="dogslot-paw-frame"><i>🐾</i><i>🐾</i><i>🐾</i><i>🐾</i><i>🐾</i></div><div className="dogslot-anticipation-paws"><i>🐾</i><b/><i>🐾</i><b/><i>🐾</i></div></div>}
+export function LineWinLabel({ line }: { line?: DogHouseLineWin }) {
+  if (!line) return null;
+  const multipliers = line.wildMultipliers ?? [],
+    calculation =
+      multipliers.length > 1
+        ? `${multipliers.map((value) => `${value}X`).join(" + ")} = ${line.wildMultiplier}X`
+        : `${line.wildMultiplier}X`;
+  return (
+    <div className="dogslot-line-label">
+      <small>
+        Линия {line.line} · база {formatLira(line.basePayout)}
+      </small>
+      {line.wildMultiplier > 1 && <span>Wild на линии · {calculation}</span>}
+      <strong>
+        {line.wildMultiplier > 1 ? `${line.wildMultiplier}X · ` : ""}
+        {formatLira(line.payout)}
+      </strong>
+    </div>
+  );
+}
+export function BonusPickGrid({
+  values,
+  revealed,
+  total,
+}: {
+  values: number[];
+  revealed: number;
+  total: number;
+}) {
+  return (
+    <div className="dogslot-bonus-pick">
+      <span>CASA DEGLI SPOSI</span>
+      <h2>La festa dei cani</h2>
+      <strong>{total} GIRI GRATIS</strong>
+      <div>
+        {values.map((value, index) => (
+          <i className={index < revealed ? "is-open" : ""} key={index}>
+            <span>🐾</span>
+            <b>{index < revealed ? value : ""}</b>
+          </i>
+        ))}
+      </div>
+      <small>
+        {revealed < values.length
+          ? "Открываем свадебные жетоны…"
+          : "Фриспины начинаются"}
+      </small>
+    </div>
+  );
+}
+export function BigWinOverlay({
+  win,
+  stake,
+  onSkip,
+}: {
+  win: number;
+  stake: number;
+  onSkip: () => void;
+}) {
+  const ratio = win / stake,
+    tier =
+      ratio >= 100
+        ? "festa"
+        : ratio >= 40
+          ? "magnifico"
+          : ratio >= 15
+            ? "grande"
+            : "bravo",
+    label =
+      tier === "festa"
+        ? "FESTA DA CANI!"
+        : tier === "magnifico"
+          ? "MAGNIFICO!"
+          : tier === "grande"
+            ? "GRANDE!"
+            : "BRAVO!";
+  return (
+    <button
+      type="button"
+      className={`dogslot-big-win is-${tier}`}
+      onClick={onSkip}
+      aria-label={`${label}. Продолжить`}
+    >
+      <span className="dogslot-big-win-title">
+        <span className="dogslot-big-win-shadow" aria-hidden="true">
+          {label}
+        </span>
+        <strong>{label}</strong>
+      </span>
+      <b>{formatLira(win)}</b>
+      <small>Нажмите, чтобы продолжить</small>
+    </button>
+  );
+}
+export function BonusSummary({
+  round,
+  onContinue,
+}: {
+  round: DogHouseSlotRound;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="dogslot-summary-v2">
+      <section>
+        <span>La festa è finita</span>
+        <h2>Собачья свадьба завершена</h2>
+        <div>
+          <p>
+            <small>Фриспинов</small>
+            <b>{round.result.awardedFreeSpins}</b>
+          </p>
+          <p>
+            <small>Sticky Wild</small>
+            <b>{round.result.stickyWildCount}</b>
+          </p>
+          <p>
+            <small>Лучший множитель</small>
+            <b>{round.result.maxLineMultiplier}X</b>
+          </p>
+          <p>
+            <small>Лучший Spin</small>
+            <b>{formatLira(round.result.bestFreeSpin)}</b>
+          </p>
+        </div>
+        <p className="dogslot-summary-prize">
+          <small>Выигрыш бонуса</small>
+          <strong>{formatLira(round.bonusWin)}</strong>
+          <span>Весь раунд · {formatLira(round.totalWin)}</span>
+        </p>
+        <button onClick={onContinue}>Забрать выигрыш</button>
+      </section>
+    </div>
+  );
+}
+export function BonusAnticipation({ active }: { active: boolean }) {
+  return (
+    <div
+      className={`dogslot-anticipation ${active ? "is-active" : ""}`}
+      aria-hidden="true"
+    >
+      <div className="dogslot-paw-frame">
+        <i>🐾</i>
+        <i>🐾</i>
+        <i>🐾</i>
+        <i>🐾</i>
+        <i>🐾</i>
+      </div>
+      <div className="dogslot-anticipation-paws">
+        <i>🐾</i>
+        <b />
+        <i>🐾</i>
+        <b />
+        <i>🐾</i>
+      </div>
+    </div>
+  );
+}

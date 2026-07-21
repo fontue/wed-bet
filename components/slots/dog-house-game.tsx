@@ -2,8 +2,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatLira } from "@/domain/market";
-import type { DogHouseOperationalSettings, DogHouseSlotRound } from "@/domain/models";
-import type { DogHouseCell, DogHouseSpin } from "@/domain/slots/dog-house/types";
+import type {
+  DogHouseOperationalSettings,
+  DogHouseSlotRound,
+} from "@/domain/models";
+import type {
+  DogHouseCell,
+  DogHouseSpin,
+} from "@/domain/slots/dog-house/types";
 import { createClientRequestId } from "@/lib/client-id";
 import { createDisplayModel } from "./dog-house/animation/display-reels";
 import type { DogHouseSpeed } from "./dog-house/animation/animation-types";
@@ -12,44 +18,659 @@ import { useDogHousePlayback } from "./dog-house/animation/use-dog-house-playbac
 import { DogHouseSoundManagerV2 } from "./dog-house/audio/sound-manager";
 import type { DogHouseSoundEvent } from "./dog-house/audio/sound-events";
 import { AnimationStatus } from "./dog-house/components/animation-status";
-import { BigWinOverlay, BonusAnticipation, BonusPickGrid, BonusSummary, LineWinLabel } from "./dog-house/components/animation-overlays";
+import {
+  BigWinOverlay,
+  BonusAnticipation,
+  BonusPickGrid,
+  BonusSummary,
+  LineWinLabel,
+} from "./dog-house/components/animation-overlays";
 import { DogHouseGrid } from "./dog-house/components/dog-house-grid";
 import { DogHouseHistoryModal } from "./dog-house/components/history-modal";
 import { DogHouseRulesModal } from "./dog-house/components/rules-modal";
 import { PresentationErrorBoundary } from "./shared/presentation-error-boundary";
-import { clearRoundPresentation, loadRoundPresentation, saveRoundPresentation } from "./shared/round-presentation-snapshot";
+import {
+  clearRoundPresentation,
+  loadRoundPresentation,
+  saveRoundPresentation,
+} from "./shared/round-presentation-snapshot";
 
-type InitialState={userId:string;settings:DogHouseOperationalSettings;balance:number;history:DogHouseSlotRound[]};
-type DogHouseDevTest="win-bravo"|"win-grande"|"win-magnifico"|"win-festa"|"bonus";
-const IS_DEVELOPMENT=process.env.NODE_ENV==="development";
-const DOG_HOUSE_DEV_TESTS:{id:DogHouseDevTest;label:string}[]=[{id:"win-bravo",label:"Большой выигрыш · 5X"},{id:"win-grande",label:"Большой выигрыш · 15X"},{id:"win-magnifico",label:"Большой выигрыш · 40X"},{id:"win-festa",label:"Большой выигрыш · 100X"},{id:"bonus",label:"Выпадение бонуса"}],DOG_HOUSE_DEV_WIN_X:Partial<Record<DogHouseDevTest,number>>={"win-bravo":5,"win-grande":15,"win-magnifico":40,"win-festa":100};
-const PREVIEW:DogHouseCell["symbol"][]=["TEN","K","BONE","Q","DACHSHUND","A","PUG","COLLAR","J","BELLA","TEN","BRUNO","K","Q","BONE"];
-const previewSpin:DogHouseSpin={grid:PREVIEW.map((symbol,index)=>({id:-index-1,symbol})),wins:[],payout:0,bonusCount:0,stickyWilds:[]};
-const devBonusSpin:DogHouseSpin={...previewSpin,grid:previewSpin.grid.map((cell,index)=>[0,7,14].includes(index)?{id:-900-index,symbol:"BONUS" as const}:cell),bonusCount:3},devBonusModel=createDisplayModel(devBonusSpin,{roundId:"dev-bonus",spinIndex:0});
-function useReducedMotion(){const [reduced,setReduced]=useState(false);useEffect(()=>{const query=matchMedia("(prefers-reduced-motion: reduce)"),update=()=>setReduced(query.matches);update();query.addEventListener("change",update);return()=>query.removeEventListener("change",update);},[]);return reduced;}
+type InitialState = {
+  userId: string;
+  settings: DogHouseOperationalSettings;
+  balance: number;
+  history: DogHouseSlotRound[];
+};
+type DogHouseDevTest =
+  "win-bravo" | "win-grande" | "win-magnifico" | "win-festa" | "bonus";
+const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
+const DOG_HOUSE_DEV_TESTS: { id: DogHouseDevTest; label: string }[] = [
+    { id: "win-bravo", label: "Большой выигрыш · 5X" },
+    { id: "win-grande", label: "Большой выигрыш · 15X" },
+    { id: "win-magnifico", label: "Большой выигрыш · 40X" },
+    { id: "win-festa", label: "Большой выигрыш · 100X" },
+    { id: "bonus", label: "Выпадение бонуса" },
+  ],
+  DOG_HOUSE_DEV_WIN_X: Partial<Record<DogHouseDevTest, number>> = {
+    "win-bravo": 5,
+    "win-grande": 15,
+    "win-magnifico": 40,
+    "win-festa": 100,
+  };
+const PREVIEW: DogHouseCell["symbol"][] = [
+  "TEN",
+  "K",
+  "BONE",
+  "Q",
+  "DACHSHUND",
+  "A",
+  "PUG",
+  "COLLAR",
+  "J",
+  "BELLA",
+  "TEN",
+  "BRUNO",
+  "K",
+  "Q",
+  "BONE",
+];
+const previewSpin: DogHouseSpin = {
+  grid: PREVIEW.map((symbol, index) => ({ id: -index - 1, symbol })),
+  wins: [],
+  payout: 0,
+  bonusCount: 0,
+  stickyWilds: [],
+};
+const devBonusSpin: DogHouseSpin = {
+    ...previewSpin,
+    grid: previewSpin.grid.map((cell, index) =>
+      [0, 7, 14].includes(index)
+        ? { id: -900 - index, symbol: "BONUS" as const }
+        : cell,
+    ),
+    bonusCount: 3,
+  },
+  devBonusModel = createDisplayModel(devBonusSpin, {
+    roundId: "dev-bonus",
+    spinIndex: 0,
+  });
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const query = matchMedia("(prefers-reduced-motion: reduce)"),
+      update = () => setReduced(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return reduced;
+}
 
-function DogHouseTopIcon({name,muted=false}:{name:"back"|"lab"|"sound"|"rules"|"history";muted?:boolean}){const common={fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round" as const,strokeLinejoin:"round" as const};return <svg className={`dogslot-top-icon dogslot-top-icon-${name}`} viewBox="0 0 24 24" aria-hidden="true">{name==="back"&&<path {...common} d="M19 12H6.5m0 0 5-5m-5 5 5 5"/>}{name==="lab"&&<><path {...common} d="M9 3h6m-5 0v5l-4.3 8.1A3.2 3.2 0 0 0 8.5 21h7a3.2 3.2 0 0 0 2.8-4.9L14 8V3"/><path className="dogslot-icon-accent" d="M7.8 15.5h8.4l1.5 2.7c.5.9-.2 2-1.2 2h-9c-1 0-1.7-1.1-1.2-2l1.5-2.7Z"/></>}{name==="sound"&&<><path {...common} d="M4 10v4h3l4 3V7l-4 3H4Z"/><path {...common} d="M14.5 9.1a4 4 0 0 1 0 5.8m2-8a7 7 0 0 1 0 10.2"/>{muted&&<path d="M4.2 4.2 19.8 19.8" stroke="#b85243" strokeWidth="2.4" strokeLinecap="round"/>}</>}{name==="rules"&&<><path {...common} d="M9.8 9.2a2.3 2.3 0 1 1 3.3 2.1c-.8.4-1.1.9-1.1 1.7"/><circle cx="12" cy="16.5" r="1.15" fill="currentColor"/></>}{name==="history"&&<><path {...common} d="M5.2 7.2A8 8 0 1 1 4 14M5.2 7.2V3.8m0 3.4H8.6"/><path {...common} d="M12 7.5V12l3 1.8"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></>}</svg>;}
-function DogHouseDevMenu({disabled,onSelect}:{disabled:boolean;onSelect:(test:DogHouseDevTest)=>void}){const details=useRef<HTMLDetailsElement>(null);if(!IS_DEVELOPMENT)return null;return <details ref={details} className="relative"><summary className="dogslot-round-button cursor-pointer list-none [&::-webkit-details-marker]:hidden" aria-label="Открыть тестовые сценарии" title="Тестовые сценарии"><DogHouseTopIcon name="lab"/></summary><div className="absolute left-1/2 top-[calc(100%+.45rem)] z-[90] w-64 -translate-x-1/2 overflow-hidden rounded-2xl border border-[#d6a943]/55 bg-[#fff8e8]/98 text-[#241b17] shadow-2xl backdrop-blur-md"><div className="border-b border-[#d6a943]/25 bg-[#633426] px-3 py-2"><strong className="block text-[.65rem] font-black uppercase tracking-[.14em] text-[#f4d15a]">Тесты анимации</strong><small className="text-[.55rem] font-bold text-white/70">Только режим разработки</small></div><div className="grid gap-1 p-2">{DOG_HOUSE_DEV_TESTS.map((test,index)=><button type="button" key={test.id} disabled={disabled} className="flex h-auto w-full items-center justify-start gap-2 rounded-xl border border-transparent bg-transparent px-2.5 py-2 text-left text-xs font-black text-[#241b17] shadow-none hover:border-[#d6a943]/25 hover:bg-[#f4d15a]/20 disabled:opacity-40" onClick={()=>{details.current?.removeAttribute("open");onSelect(test.id);}}><i className="grid size-5 flex-none place-items-center rounded-full bg-[#f4d15a] text-[.55rem] not-italic text-[#633426]">{index+1}</i><span>{test.label}</span></button>)}</div></div></details>;}
+function DogHouseTopIcon({
+  name,
+  muted = false,
+}: {
+  name: "back" | "lab" | "sound" | "rules" | "history";
+  muted?: boolean;
+}) {
+  const common = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  return (
+    <svg
+      className={`dogslot-top-icon dogslot-top-icon-${name}`}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      {name === "back" && <path {...common} d="M19 12H6.5m0 0 5-5m-5 5 5 5" />}
+      {name === "lab" && (
+        <>
+          <path
+            {...common}
+            d="M9 3h6m-5 0v5l-4.3 8.1A3.2 3.2 0 0 0 8.5 21h7a3.2 3.2 0 0 0 2.8-4.9L14 8V3"
+          />
+          <path
+            className="dogslot-icon-accent"
+            d="M7.8 15.5h8.4l1.5 2.7c.5.9-.2 2-1.2 2h-9c-1 0-1.7-1.1-1.2-2l1.5-2.7Z"
+          />
+        </>
+      )}
+      {name === "sound" && (
+        <>
+          <path {...common} d="M4 10v4h3l4 3V7l-4 3H4Z" />
+          <path
+            {...common}
+            d="M14.5 9.1a4 4 0 0 1 0 5.8m2-8a7 7 0 0 1 0 10.2"
+          />
+          {muted && (
+            <path
+              d="M4.2 4.2 19.8 19.8"
+              stroke="#b85243"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+          )}
+        </>
+      )}
+      {name === "rules" && (
+        <>
+          <path
+            {...common}
+            d="M9.8 9.2a2.3 2.3 0 1 1 3.3 2.1c-.8.4-1.1.9-1.1 1.7"
+          />
+          <circle cx="12" cy="16.5" r="1.15" fill="currentColor" />
+        </>
+      )}
+      {name === "history" && (
+        <>
+          <path {...common} d="M5.2 7.2A8 8 0 1 1 4 14M5.2 7.2V3.8m0 3.4H8.6" />
+          <path {...common} d="M12 7.5V12l3 1.8" />
+          <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+        </>
+      )}
+    </svg>
+  );
+}
+function DogHouseDevMenu({
+  disabled,
+  onSelect,
+}: {
+  disabled: boolean;
+  onSelect: (test: DogHouseDevTest) => void;
+}) {
+  const details = useRef<HTMLDetailsElement>(null);
+  if (!IS_DEVELOPMENT) return null;
+  return (
+    <details ref={details} className="relative">
+      <summary
+        className="dogslot-round-button cursor-pointer list-none [&::-webkit-details-marker]:hidden"
+        aria-label="Открыть тестовые сценарии"
+        title="Тестовые сценарии"
+      >
+        <DogHouseTopIcon name="lab" />
+      </summary>
+      <div className="absolute left-1/2 top-[calc(100%+.45rem)] z-[90] w-64 -translate-x-1/2 overflow-hidden rounded-2xl border border-[#d6a943]/55 bg-[#fff8e8]/98 text-[#241b17] shadow-2xl backdrop-blur-md">
+        <div className="border-b border-[#d6a943]/25 bg-[#633426] px-3 py-2">
+          <strong className="block text-[.65rem] font-black uppercase tracking-[.14em] text-[#f4d15a]">
+            Тесты анимации
+          </strong>
+          <small className="text-[.55rem] font-bold text-white/70">
+            Только режим разработки
+          </small>
+        </div>
+        <div className="grid gap-1 p-2">
+          {DOG_HOUSE_DEV_TESTS.map((test, index) => (
+            <button
+              type="button"
+              key={test.id}
+              disabled={disabled}
+              className="flex h-auto w-full items-center justify-start gap-2 rounded-xl border border-transparent bg-transparent px-2.5 py-2 text-left text-xs font-black text-[#241b17] shadow-none hover:border-[#d6a943]/25 hover:bg-[#f4d15a]/20 disabled:opacity-40"
+              onClick={() => {
+                details.current?.removeAttribute("open");
+                onSelect(test.id);
+              }}
+            >
+              <i className="grid size-5 flex-none place-items-center rounded-full bg-[#f4d15a] text-[.55rem] not-italic text-[#633426]">
+                {index + 1}
+              </i>
+              <span>{test.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </details>
+  );
+}
 
-export function DogHouseGame({initialState}:{initialState:InitialState}){
-  const bets=initialState.settings.allowedBets,[stake,setStake]=useState(bets[0]),[balance,setBalance]=useState(initialState.balance),[history,setHistory]=useState(initialState.history),[speed,setSpeed]=useState<DogHouseSpeed>("normal"),[muted,setMuted]=useState(false),[rules,setRules]=useState(false),[historyOpen,setHistoryOpen]=useState(false),[error,setError]=useState(""),[devTest,setDevTest]=useState<DogHouseDevTest|null>(null),[devBonusIntro,setDevBonusIntro]=useState(false),[devStoppedReels,setDevStoppedReels]=useState(5),[devStoppingReel,setDevStoppingReel]=useState(-1),[recoverableRound,setRecoverableRound]=useState<DogHouseSlotRound>(),reducedMotion=useReducedMotion(),[sound]=useState(()=>new DogHouseSoundManagerV2()),pending=useRef<{stake:number;idempotencyKey:string;debited:boolean}|undefined>(undefined),recoveringRoundId=useRef<string|undefined>(undefined);
-  useEffect(()=>{sound.setMuted(muted);},[muted,sound]);useEffect(()=>()=>sound.dispose(),[sound]);useEffect(()=>{window.dispatchEvent(new CustomEvent("wedbet:balance",{detail:balance}));},[balance]);
-  const onSound=useCallback((event:DogHouseSoundEvent,step?:number)=>{if(event!=="anticipation")sound.stopLoops();sound.play(event,step);},[sound]);
-  const complete=useCallback((round:DogHouseSlotRound)=>{sound.stopLoops();const recovered=recoveringRoundId.current===round.id;recoveringRoundId.current=undefined;if(!recovered)setBalance(round.balanceAfter);setHistory((items)=>[round,...items.filter((item)=>item.id!==round.id)].slice(0,20));pending.current=undefined;clearRoundPresentation(localStorage,round.gameId,initialState.userId);},[initialState.userId,sound]);
-  const playback=useDogHousePlayback({speed,reducedMotion,onSound,onComplete:complete}),{view}=playback;
-  const requesting=view.state==="requesting-spin",busy=playback.busy,devBonusActive=IS_DEVELOPMENT&&devTest==="bonus",model=devBonusActive?devBonusModel:view.model??createDisplayModel(previewSpin,{roundId:"preview",spinIndex:0});
-  const interactionLocked=busy||devTest!==null||Boolean(recoverableRound);
-  const runDevTest=useCallback((test:DogHouseDevTest)=>{if(!IS_DEVELOPMENT||busy||devTest!==null||recoverableRound)return;setError("");setDevBonusIntro(false);setDevStoppedReels(test==="bonus"?0:5);setDevStoppingReel(-1);setDevTest(test);onSound(test==="bonus"?"reels-start":"big-win");},[busy,devTest,onSound,recoverableRound]);
-  useEffect(()=>{let active=true;const round=loadRoundPresentation<DogHouseSlotRound>(localStorage,{gameId:"casa-degli-sposi",userId:initialState.userId,availableRoundIds:new Set(initialState.history.map((item)=>item.id))});if(round)queueMicrotask(()=>{if(active)setRecoverableRound(round);});return()=>{active=false;};},[initialState.history,initialState.userId]);
-  useEffect(()=>{if(!IS_DEVELOPMENT||devTest!=="bonus")return;const timings=timingsFor(speed,reducedMotion),timers:number[]=[];let cursor=timings.minimumSpin;const schedule=(delay:number,run:()=>void)=>timers.push(window.setTimeout(run,delay));for(let reel=0;reel<5;reel+=1){if(reel===4){schedule(cursor,()=>{setDevStoppedReels(4);setDevStoppingReel(-1);onSound("anticipation");});cursor+=Math.min(timings.anticipationExtra,2800);}schedule(cursor,()=>{onSound("reel-stop",reel);setDevStoppedReels(reel);setDevStoppingReel(reel);});cursor+=timings.reelDeceleration;schedule(cursor,()=>{setDevStoppedReels(reel+1);setDevStoppingReel(-1);if(reel===0)onSound("paw-1");if(reel===2)onSound("paw-2");if(reel===4)onSound("paw-3");});cursor+=timings.reelStopGap;}schedule(cursor+timings.bonusConfirm,()=>{onSound("bonus-trigger");setDevBonusIntro(true);});return()=>{timers.forEach(window.clearTimeout);sound.stopLoops();};},[devTest,onSound,reducedMotion,sound,speed]);
-  async function spin(){
-    if(devTest!==null){setError("Завершите тест анимации перед настоящим Spin.");return;}if(recoverableRound){setError("Сначала завершите показ сохранённого раунда.");return;}if(busy){if(!requesting)playback.skip();return;}if(!navigator.onLine){setError("Spin требует сети. Полученный раунд можно доиграть offline, новый запуск запрещён.");return;}if(balance<stake&&!pending.current){setError("Недостаточно свадебных лир.");return;}if(!initialState.settings.enabled||!initialState.settings.spinsEnabled){setError("Игра временно закрыта крупье.");return;}
-    await sound.unlock();onSound("spin-press");setError("");playback.requesting();const existing=pending.current,request=existing??{stake,idempotencyKey:createClientRequestId(),debited:true};if(!existing){pending.current=request;setBalance((value)=>value-request.stake);}
-    try{const response=await fetch("/api/slots/casa-degli-sposi/spin",{method:"POST",cache:"no-store",headers:{"content-type":"application/json"},body:JSON.stringify({gameId:"casa-degli-sposi",stake:request.stake,idempotencyKey:request.idempotencyKey})}),body=await response.json() as {round?:DogHouseSlotRound;error?:string};if(!response.ok||!body.round){if(request.debited)setBalance((value)=>value+request.stake);pending.current=undefined;throw new Error(body.error??"Spin не выполнен");}saveRoundPresentation(localStorage,body.round);setBalance(body.round.balanceBefore-body.round.chargedAmount);await playback.start(body.round);}catch(cause){playback.reset();if(pending.current)setError("Связь оборвалась. Повторите Spin — будет использован тот же ключ без нового списания.");else setError(cause instanceof Error?cause.message:"Spin не выполнен");}
+export function DogHouseGame({ initialState }: { initialState: InitialState }) {
+  const bets = initialState.settings.allowedBets,
+    [stake, setStake] = useState(bets[0]),
+    [balance, setBalance] = useState(initialState.balance),
+    [history, setHistory] = useState(initialState.history),
+    [speed, setSpeed] = useState<DogHouseSpeed>("normal"),
+    [muted, setMuted] = useState(false),
+    [rules, setRules] = useState(false),
+    [historyOpen, setHistoryOpen] = useState(false),
+    [error, setError] = useState(""),
+    [devTest, setDevTest] = useState<DogHouseDevTest | null>(null),
+    [devBonusIntro, setDevBonusIntro] = useState(false),
+    [devStoppedReels, setDevStoppedReels] = useState(5),
+    [devStoppingReel, setDevStoppingReel] = useState(-1),
+    [recoverableRound, setRecoverableRound] = useState<DogHouseSlotRound>(),
+    reducedMotion = useReducedMotion(),
+    [sound] = useState(() => new DogHouseSoundManagerV2()),
+    pending = useRef<
+      { stake: number; idempotencyKey: string; debited: boolean } | undefined
+    >(undefined),
+    recoveringRoundId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    sound.setMuted(muted);
+  }, [muted, sound]);
+  useEffect(() => () => sound.dispose(), [sound]);
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("wedbet:balance", { detail: balance }),
+    );
+  }, [balance]);
+  const onSound = useCallback(
+    (event: DogHouseSoundEvent, step?: number) => {
+      if (event !== "anticipation") sound.stopLoops();
+      sound.play(event, step);
+    },
+    [sound],
+  );
+  const complete = useCallback(
+    (round: DogHouseSlotRound) => {
+      sound.stopLoops();
+      const recovered = recoveringRoundId.current === round.id;
+      recoveringRoundId.current = undefined;
+      if (!recovered) setBalance(round.balanceAfter);
+      setHistory((items) =>
+        [round, ...items.filter((item) => item.id !== round.id)].slice(0, 20),
+      );
+      pending.current = undefined;
+      clearRoundPresentation(localStorage, round.gameId, initialState.userId);
+    },
+    [initialState.userId, sound],
+  );
+  const playback = useDogHousePlayback({
+      speed,
+      reducedMotion,
+      onSound,
+      onComplete: complete,
+    }),
+    { view } = playback;
+  const requesting = view.state === "requesting-spin",
+    busy = playback.busy,
+    devBonusActive = IS_DEVELOPMENT && devTest === "bonus",
+    model = devBonusActive
+      ? devBonusModel
+      : (view.model ??
+        createDisplayModel(previewSpin, { roundId: "preview", spinIndex: 0 }));
+  const interactionLocked =
+    busy || devTest !== null || Boolean(recoverableRound);
+  const runDevTest = useCallback(
+    (test: DogHouseDevTest) => {
+      if (!IS_DEVELOPMENT || busy || devTest !== null || recoverableRound)
+        return;
+      setError("");
+      setDevBonusIntro(false);
+      setDevStoppedReels(test === "bonus" ? 0 : 5);
+      setDevStoppingReel(-1);
+      setDevTest(test);
+      onSound(test === "bonus" ? "reels-start" : "big-win");
+    },
+    [busy, devTest, onSound, recoverableRound],
+  );
+  useEffect(() => {
+    let active = true;
+    const round = loadRoundPresentation<DogHouseSlotRound>(localStorage, {
+      gameId: "casa-degli-sposi",
+      userId: initialState.userId,
+      availableRoundIds: new Set(initialState.history.map((item) => item.id)),
+    });
+    if (round)
+      queueMicrotask(() => {
+        if (active) setRecoverableRound(round);
+      });
+    return () => {
+      active = false;
+    };
+  }, [initialState.history, initialState.userId]);
+  useEffect(() => {
+    if (!IS_DEVELOPMENT || devTest !== "bonus") return;
+    const timings = timingsFor(speed, reducedMotion),
+      timers: number[] = [];
+    let cursor = timings.minimumSpin;
+    const schedule = (delay: number, run: () => void) =>
+      timers.push(window.setTimeout(run, delay));
+    for (let reel = 0; reel < 5; reel += 1) {
+      if (reel === 4) {
+        schedule(cursor, () => {
+          setDevStoppedReels(4);
+          setDevStoppingReel(-1);
+          onSound("anticipation");
+        });
+        cursor += Math.min(timings.anticipationExtra, 2800);
+      }
+      schedule(cursor, () => {
+        onSound("reel-stop", reel);
+        setDevStoppedReels(reel);
+        setDevStoppingReel(reel);
+      });
+      cursor += timings.reelDeceleration;
+      schedule(cursor, () => {
+        setDevStoppedReels(reel + 1);
+        setDevStoppingReel(-1);
+        if (reel === 0) onSound("paw-1");
+        if (reel === 2) onSound("paw-2");
+        if (reel === 4) onSound("paw-3");
+      });
+      cursor += timings.reelStopGap;
+    }
+    schedule(cursor + timings.bonusConfirm, () => {
+      onSound("bonus-trigger");
+      setDevBonusIntro(true);
+    });
+    return () => {
+      timers.forEach(window.clearTimeout);
+      sound.stopLoops();
+    };
+  }, [devTest, onSound, reducedMotion, sound, speed]);
+  async function spin() {
+    if (devTest !== null) {
+      setError("Завершите тест анимации перед настоящим Spin.");
+      return;
+    }
+    if (recoverableRound) {
+      setError("Сначала завершите показ сохранённого раунда.");
+      return;
+    }
+    if (busy) {
+      if (!requesting) playback.skip();
+      return;
+    }
+    if (!navigator.onLine) {
+      setError(
+        "Spin требует сети. Полученный раунд можно доиграть offline, новый запуск запрещён.",
+      );
+      return;
+    }
+    if (balance < stake && !pending.current) {
+      setError("Недостаточно свадебных лир.");
+      return;
+    }
+    if (!initialState.settings.enabled || !initialState.settings.spinsEnabled) {
+      setError("Игра временно закрыта крупье.");
+      return;
+    }
+    await sound.unlock();
+    onSound("spin-press");
+    setError("");
+    playback.requesting();
+    const existing = pending.current,
+      request = existing ?? {
+        stake,
+        idempotencyKey: createClientRequestId(),
+        debited: true,
+      };
+    if (!existing) {
+      pending.current = request;
+      setBalance((value) => value - request.stake);
+    }
+    try {
+      const response = await fetch("/api/slots/casa-degli-sposi/spin", {
+          method: "POST",
+          cache: "no-store",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            gameId: "casa-degli-sposi",
+            stake: request.stake,
+            idempotencyKey: request.idempotencyKey,
+          }),
+        }),
+        body = (await response.json()) as {
+          round?: DogHouseSlotRound;
+          error?: string;
+        };
+      if (!response.ok || !body.round) {
+        if (request.debited) setBalance((value) => value + request.stake);
+        pending.current = undefined;
+        throw new Error(body.error ?? "Spin не выполнен");
+      }
+      saveRoundPresentation(localStorage, body.round);
+      setBalance(body.round.balanceBefore - body.round.chargedAmount);
+      await playback.start(body.round);
+    } catch (cause) {
+      playback.reset();
+      if (pending.current)
+        setError(
+          "Связь оборвалась. Повторите Spin — будет использован тот же ключ без нового списания.",
+        );
+      else
+        setError(cause instanceof Error ? cause.message : "Spin не выполнен");
+    }
   }
-  function changeStake(direction:number){const index=bets.indexOf(stake);setStake(bets[Math.max(0,Math.min(bets.length-1,index+direction))]);}
-  function cycleSpeed(){setSpeed((value)=>value==="normal"?"quick":value==="quick"?"turbo":"normal");}
-  const bonusReveal=["entering-bonus","revealing-free-spins","showing-free-spin-award","starting-free-spins"].includes(view.state),showBig=view.state==="showing-big-win"&&view.celebrationWin>0,devWinX=devTest?DOG_HOUSE_DEV_WIN_X[devTest]:undefined;
-  return <div className={`dogslot-screen dogslot-v2 ${view.bonusMode?"is-bonus-mode":""} is-speed-${speed} ${view.fastForward?"is-fast-forward":""} ${reducedMotion?"is-reduced-motion":""}`}><div className="dogslot-sky"/><header className="dogslot-top"><Link href="/slots" aria-label="Назад" className="dogslot-round-button"><DogHouseTopIcon name="back"/></Link><div><span>₤</span>{balance.toLocaleString("ru-RU")}</div><nav><DogHouseDevMenu disabled={interactionLocked} onSelect={runDevTest}/><button className="dogslot-round-button" onClick={()=>setMuted((value)=>!value)} aria-label={muted?"Включить звук":"Выключить звук"}><DogHouseTopIcon name="sound" muted={muted}/></button><button className="dogslot-round-button" onClick={()=>setRules(true)} aria-label="Правила"><DogHouseTopIcon name="rules"/></button><button className="dogslot-round-button" onClick={()=>setHistoryOpen(true)} aria-label="История"><DogHouseTopIcon name="history"/></button></nav></header><main><div className="dogslot-title"><small>Lucky Wedding Dogs {view.bonusMode&&"· BONUS"}</small><h1>Casa degli <b>Sposi</b></h1></div>{view.bonusMode&&view.freeSpinNumber>0&&<div className="dogslot-fs-counter">SPIN {view.freeSpinNumber} / {view.freeSpinTotal}</div>}<div className={`dogslot-machine is-${view.state}`}><PresentationErrorBoundary resetKey={`${view.round?.id??"preview"}-${devBonusActive?"dev-bonus":view.state}`} onRecover={playback.recover}><DogHouseGrid model={model} stoppedReels={devBonusActive?devStoppedReels:view.stoppedReels} stoppingReel={devBonusActive?devStoppingReel:view.stoppingReel} speed={speed} reducedMotion={reducedMotion} line={devBonusActive?undefined:view.activeLine}/></PresentationErrorBoundary><BonusAnticipation active={(devBonusActive&&!devBonusIntro&&devStoppedReels===4&&devStoppingReel<0)||view.state==="anticipating-bonus"||view.state==="confirming-bonus"}/><LineWinLabel line={devBonusActive?undefined:view.activeLine}/></div><div className="dogslot-status" aria-live="polite">{view.displayWin>0&&<strong>ВЫИГРЫШ · {formatLira(view.displayWin)}</strong>}{view.recoveryNotice&&<span>{view.recoveryNotice}</span>}{recoverableRound&&<div className="slot-resume-card"><span>Есть завершённый раунд, показ которого прервался.</span><div><button onClick={()=>{const round=recoverableRound;recoveringRoundId.current=round.id;setRecoverableRound(undefined);setError("");void playback.start(round);}}>Продолжить показ раунда</button><button onClick={()=>{const round=recoverableRound;recoveringRoundId.current=round.id;setRecoverableRound(undefined);setError("");playback.restoreFinal(round);}}>Показать результат</button></div></div>}{error&&<b>{error}</b>}</div></main><footer className="dogslot-controls dogslot-controls-v2"><div className="dogslot-bet"><button disabled={interactionLocked||bets.indexOf(stake)===0} onClick={()=>changeStake(-1)}>−</button><span><small>Ставка</small><b>{formatLira(stake)}</b></span><button disabled={interactionLocked||bets.indexOf(stake)===bets.length-1} onClick={()=>changeStake(1)}>+</button></div><button className="dogslot-spin" disabled={devTest!==null||Boolean(recoverableRound)||requesting} onClick={()=>void spin()}><b>{busy?"SKIP":"SPIN"}</b>{busy&&<small>ускорить</small>}</button><button className={`dogslot-turbo is-${speed}`} disabled={interactionLocked} onClick={cycleSpeed}><b>{speed==="normal"?"▶":speed==="quick"?"▶▶":"⚡"}</b><small>{speed}</small></button></footer>
-  {bonusReveal&&view.round&&<div className="dogslot-overlay dogslot-bonus-stage">{view.state==="entering-bonus"?<div><span>CASA DEGLI SPOSI</span><strong>La festa dei cani</strong><small>Свадебный двор зажигает огни…</small></div>:<BonusPickGrid values={view.round.result.freeSpinReveal} revealed={view.revealedTokens} total={view.revealTotal}/>}</div>}{showBig&&view.round&&<BigWinOverlay win={view.celebrationWin} stake={view.round.stake} onSkip={playback.skip}/>} {view.state==="bonus-summary"&&view.round&&<BonusSummary round={view.round} onContinue={playback.continueOverlay}/>} {IS_DEVELOPMENT&&devWinX&&<BigWinOverlay win={stake*devWinX} stake={stake} onSkip={()=>setDevTest(null)}/>} {IS_DEVELOPMENT&&devBonusActive&&devBonusIntro&&<button type="button" className="dogslot-overlay dogslot-bonus-stage" onClick={()=>{sound.stopLoops();setDevBonusIntro(false);setDevTest(null);}}><div><span>CASA DEGLI SPOSI</span><strong>La festa dei cani</strong><small>Нажмите, чтобы продолжить</small></div></button>}<AnimationStatus state={view.state}/>{rules&&<DogHouseRulesModal stake={stake} onClose={()=>setRules(false)}/>} {historyOpen&&<DogHouseHistoryModal rounds={history} onClose={()=>setHistoryOpen(false)}/>}</div>;
+  function changeStake(direction: number) {
+    const index = bets.indexOf(stake);
+    setStake(bets[Math.max(0, Math.min(bets.length - 1, index + direction))]);
+  }
+  function cycleSpeed() {
+    setSpeed((value) =>
+      value === "normal" ? "quick" : value === "quick" ? "turbo" : "normal",
+    );
+  }
+  const bonusReveal = [
+      "entering-bonus",
+      "revealing-free-spins",
+      "showing-free-spin-award",
+      "starting-free-spins",
+    ].includes(view.state),
+    showBig = view.state === "showing-big-win" && view.celebrationWin > 0,
+    devWinX = devTest ? DOG_HOUSE_DEV_WIN_X[devTest] : undefined;
+  return (
+    <div
+      className={`dogslot-screen dogslot-v2 ${view.bonusMode ? "is-bonus-mode" : ""} is-speed-${speed} ${view.fastForward ? "is-fast-forward" : ""} ${reducedMotion ? "is-reduced-motion" : ""}`}
+    >
+      <div className="dogslot-sky" />
+      <header className="dogslot-top">
+        <Link href="/slots" aria-label="Назад" className="dogslot-round-button">
+          <DogHouseTopIcon name="back" />
+        </Link>
+        <div>
+          <span>₤</span>
+          {balance.toLocaleString("ru-RU")}
+        </div>
+        <nav>
+          <DogHouseDevMenu disabled={interactionLocked} onSelect={runDevTest} />
+          <button
+            className="dogslot-round-button"
+            onClick={() => setMuted((value) => !value)}
+            aria-label={muted ? "Включить звук" : "Выключить звук"}
+          >
+            <DogHouseTopIcon name="sound" muted={muted} />
+          </button>
+          <button
+            className="dogslot-round-button"
+            onClick={() => setRules(true)}
+            aria-label="Правила"
+          >
+            <DogHouseTopIcon name="rules" />
+          </button>
+          <button
+            className="dogslot-round-button"
+            onClick={() => setHistoryOpen(true)}
+            aria-label="История"
+          >
+            <DogHouseTopIcon name="history" />
+          </button>
+        </nav>
+      </header>
+      <main>
+        <div className="dogslot-title">
+          <small>Lucky Wedding Dogs {view.bonusMode && "· BONUS"}</small>
+          <h1>
+            Casa degli <b>Sposi</b>
+          </h1>
+        </div>
+        {view.bonusMode && view.freeSpinNumber > 0 && (
+          <div className="dogslot-fs-counter">
+            SPIN {view.freeSpinNumber} / {view.freeSpinTotal}
+          </div>
+        )}
+        <div className={`dogslot-machine is-${view.state}`}>
+          <PresentationErrorBoundary
+            resetKey={`${view.round?.id ?? "preview"}-${devBonusActive ? "dev-bonus" : view.state}`}
+            onRecover={playback.recover}
+          >
+            <DogHouseGrid
+              model={model}
+              stoppedReels={
+                devBonusActive ? devStoppedReels : view.stoppedReels
+              }
+              stoppingReel={
+                devBonusActive ? devStoppingReel : view.stoppingReel
+              }
+              speed={speed}
+              reducedMotion={reducedMotion}
+              line={devBonusActive ? undefined : view.activeLine}
+            />
+          </PresentationErrorBoundary>
+          <BonusAnticipation
+            active={
+              (devBonusActive &&
+                !devBonusIntro &&
+                devStoppedReels === 4 &&
+                devStoppingReel < 0) ||
+              view.state === "anticipating-bonus" ||
+              view.state === "confirming-bonus"
+            }
+          />
+          <LineWinLabel line={devBonusActive ? undefined : view.activeLine} />
+        </div>
+        <div className="dogslot-status" aria-live="polite">
+          {view.displayWin > 0 && (
+            <strong>ВЫИГРЫШ · {formatLira(view.displayWin)}</strong>
+          )}
+          {view.recoveryNotice && <span>{view.recoveryNotice}</span>}
+          {recoverableRound && (
+            <div className="slot-resume-card">
+              <span>Есть завершённый раунд, показ которого прервался.</span>
+              <div>
+                <button
+                  onClick={() => {
+                    const round = recoverableRound;
+                    recoveringRoundId.current = round.id;
+                    setRecoverableRound(undefined);
+                    setError("");
+                    void playback.start(round);
+                  }}
+                >
+                  Продолжить показ раунда
+                </button>
+                <button
+                  onClick={() => {
+                    const round = recoverableRound;
+                    recoveringRoundId.current = round.id;
+                    setRecoverableRound(undefined);
+                    setError("");
+                    playback.restoreFinal(round);
+                  }}
+                >
+                  Показать результат
+                </button>
+              </div>
+            </div>
+          )}
+          {error && <b>{error}</b>}
+        </div>
+      </main>
+      <footer className="dogslot-controls dogslot-controls-v2">
+        <div className="dogslot-bet">
+          <button
+            disabled={interactionLocked || bets.indexOf(stake) === 0}
+            onClick={() => changeStake(-1)}
+          >
+            −
+          </button>
+          <span>
+            <small>Ставка</small>
+            <b>{formatLira(stake)}</b>
+          </span>
+          <button
+            disabled={
+              interactionLocked || bets.indexOf(stake) === bets.length - 1
+            }
+            onClick={() => changeStake(1)}
+          >
+            +
+          </button>
+        </div>
+        <button
+          className="dogslot-spin"
+          disabled={devTest !== null || Boolean(recoverableRound) || requesting}
+          onClick={() => void spin()}
+        >
+          <b>{busy ? "SKIP" : "SPIN"}</b>
+          {busy && <small>ускорить</small>}
+        </button>
+        <button
+          className={`dogslot-turbo is-${speed}`}
+          disabled={interactionLocked}
+          onClick={cycleSpeed}
+        >
+          <b>{speed === "normal" ? "▶" : speed === "quick" ? "▶▶" : "⚡"}</b>
+          <small>{speed}</small>
+        </button>
+      </footer>
+      {bonusReveal && view.round && (
+        <div className="dogslot-overlay dogslot-bonus-stage">
+          {view.state === "entering-bonus" ? (
+            <div>
+              <span>CASA DEGLI SPOSI</span>
+              <strong>La festa dei cani</strong>
+              <small>Свадебный двор зажигает огни…</small>
+            </div>
+          ) : (
+            <BonusPickGrid
+              values={view.round.result.freeSpinReveal}
+              revealed={view.revealedTokens}
+              total={view.revealTotal}
+            />
+          )}
+        </div>
+      )}
+      {showBig && view.round && (
+        <BigWinOverlay
+          win={view.celebrationWin}
+          stake={view.round.stake}
+          onSkip={playback.skip}
+        />
+      )}{" "}
+      {view.state === "bonus-summary" && view.round && (
+        <BonusSummary
+          round={view.round}
+          onContinue={playback.continueOverlay}
+        />
+      )}{" "}
+      {IS_DEVELOPMENT && devWinX && (
+        <BigWinOverlay
+          win={stake * devWinX}
+          stake={stake}
+          onSkip={() => setDevTest(null)}
+        />
+      )}{" "}
+      {IS_DEVELOPMENT && devBonusActive && devBonusIntro && (
+        <button
+          type="button"
+          className="dogslot-overlay dogslot-bonus-stage"
+          onClick={() => {
+            sound.stopLoops();
+            setDevBonusIntro(false);
+            setDevTest(null);
+          }}
+        >
+          <div>
+            <span>CASA DEGLI SPOSI</span>
+            <strong>La festa dei cani</strong>
+            <small>Нажмите, чтобы продолжить</small>
+          </div>
+        </button>
+      )}
+      <AnimationStatus state={view.state} />
+      {rules && (
+        <DogHouseRulesModal stake={stake} onClose={() => setRules(false)} />
+      )}{" "}
+      {historyOpen && (
+        <DogHouseHistoryModal
+          rounds={history}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
+    </div>
+  );
 }

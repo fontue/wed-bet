@@ -7,5 +7,13 @@ export default async function DuelsPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
   if (user.role !== "USER") redirect("/admin/duels");
-  return <div className="page-shell"><DuelArena currentUser={user} initialBalance={user.balance} initialState={getDuelState(user.id)} /></div>;
+  return (
+    <div className="page-shell">
+      <DuelArena
+        currentUser={user}
+        initialBalance={user.balance}
+        initialState={getDuelState(user.id)}
+      />
+    </div>
+  );
 }

@@ -1,15 +1,172 @@
 "use client";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "react";
 import type { LemonzaSymbol } from "@/domain/slots/sweet-lemonza/types";
-export interface ParticleBurst { row:number;column:number;symbol:LemonzaSymbol;intensity?:number }
-export interface ParticleLayerHandle { burst:(bursts:ParticleBurst[])=>void;clear:()=>void;active:()=>number }
-interface Particle{x:number;y:number;vx:number;vy:number;life:number;maxLife:number;color:string;size:number;shape:"dot"|"leaf"}
-const COLORS:Partial<Record<LemonzaSymbol,string[]>>={LEMON:["#f8dd4e","#75a34f"],GRAPES:["#805ea0","#d5a7f3"],RINGS:["#f6cf60","#fff2b5"],LIMONCELLO:["#f4d447","#fff6a7"],WINE:["#315f4c","#a8444e"],PROSECCO:["#ffe492","#ffffff"],BOUQUET:["#ee9eaa","#80a96f"],SCATTER:["#f5c44b","#bd4e58"],MULTIPLIER:["#f4d447","#ffffff"]};
-export const ParticleLayer=forwardRef<ParticleLayerHandle,{reducedMotion:boolean}>(function ParticleLayer({reducedMotion},ref){
-  const canvasRef=useRef<HTMLCanvasElement>(null),particles=useRef<Particle[]>([]),frame=useRef(0),running=useRef(false);
-  const draw=useCallback(function renderFrame(){const canvas=canvasRef.current,context=canvas?.getContext("2d");if(!canvas||!context){running.current=false;return;}context.clearRect(0,0,canvas.width,canvas.height);let alive=0;for(const particle of particles.current){particle.life-=1;if(particle.life<=0)continue;particle.x+=particle.vx;particle.y+=particle.vy;particle.vy+=.0275;const alpha=Math.max(0,particle.life/particle.maxLife);context.globalAlpha=alpha;context.fillStyle=particle.color;if(particle.shape==="leaf"){context.save();context.translate(particle.x,particle.y);context.rotate(Math.atan2(particle.vy,particle.vx));context.scale(1.6,.7);context.beginPath();context.arc(0,0,particle.size,0,Math.PI*2);context.fill();context.restore();}else{context.beginPath();context.arc(particle.x,particle.y,particle.size,0,Math.PI*2);context.fill();}particles.current[alive++]=particle;}particles.current.length=alive;context.globalAlpha=1;if(alive)frame.current=requestAnimationFrame(renderFrame);else{running.current=false;context.clearRect(0,0,canvas.width,canvas.height);}},[]);
-  useEffect(()=>{const canvas=canvasRef.current,parent=canvas?.parentElement;if(!canvas||!parent)return;const resize=()=>{const rect=parent.getBoundingClientRect();canvas.width=Math.ceil(rect.width);canvas.height=Math.ceil(rect.height);canvas.style.width=`${rect.width}px`;canvas.style.height=`${rect.height}px`;};resize();const observer=new ResizeObserver(resize);observer.observe(parent);return()=>observer.disconnect();},[]);
-  useImperativeHandle(ref,()=>({burst(bursts){const canvas=canvasRef.current;if(!canvas)return;const count=reducedMotion?2:4;for(const burst of bursts){const colors=COLORS[burst.symbol]??["#f3d14e","#fff"],amount=Math.max(2,Math.round(count*(burst.intensity??1)));for(let index=0;index<amount&&particles.current.length<96;index+=1){const angle=Math.PI*2*index/amount+Math.random()*.35,speed=(1.2+Math.random()*1.8)/2;particles.current.push({x:(burst.column+.5)*canvas.width/6,y:(burst.row+.5)*canvas.height/5,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-.5,life:30+Math.random()*18,maxLife:48,color:colors[index%colors.length],size:1.5+Math.random()*2,shape:index%5===0?"leaf":"dot"});}}if(!running.current){running.current=true;frame.current=requestAnimationFrame(draw);}},clear(){particles.current=[];cancelAnimationFrame(frame.current);running.current=false;canvasRef.current?.getContext("2d")?.clearRect(0,0,canvasRef.current.width,canvasRef.current.height);},active(){return particles.current.length;}}),[draw,reducedMotion]);
-  useEffect(()=>()=>{cancelAnimationFrame(frame.current);particles.current=[];},[]);
-  return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 z-30"/>;
+export interface ParticleBurst {
+  row: number;
+  column: number;
+  symbol: LemonzaSymbol;
+  intensity?: number;
+}
+export interface ParticleLayerHandle {
+  burst: (bursts: ParticleBurst[]) => void;
+  clear: () => void;
+  active: () => number;
+}
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+  shape: "dot" | "leaf";
+}
+const COLORS: Partial<Record<LemonzaSymbol, string[]>> = {
+  LEMON: ["#f8dd4e", "#75a34f"],
+  GRAPES: ["#805ea0", "#d5a7f3"],
+  RINGS: ["#f6cf60", "#fff2b5"],
+  LIMONCELLO: ["#f4d447", "#fff6a7"],
+  WINE: ["#315f4c", "#a8444e"],
+  PROSECCO: ["#ffe492", "#ffffff"],
+  BOUQUET: ["#ee9eaa", "#80a96f"],
+  SCATTER: ["#f5c44b", "#bd4e58"],
+  MULTIPLIER: ["#f4d447", "#ffffff"],
+};
+export const ParticleLayer = forwardRef<
+  ParticleLayerHandle,
+  { reducedMotion: boolean }
+>(function ParticleLayer({ reducedMotion }, ref) {
+  const canvasRef = useRef<HTMLCanvasElement>(null),
+    particles = useRef<Particle[]>([]),
+    frame = useRef(0),
+    running = useRef(false);
+  const draw = useCallback(function renderFrame() {
+    const canvas = canvasRef.current,
+      context = canvas?.getContext("2d");
+    if (!canvas || !context) {
+      running.current = false;
+      return;
+    }
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = 0;
+    for (const particle of particles.current) {
+      particle.life -= 1;
+      if (particle.life <= 0) continue;
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.vy += 0.0275;
+      const alpha = Math.max(0, particle.life / particle.maxLife);
+      context.globalAlpha = alpha;
+      context.fillStyle = particle.color;
+      if (particle.shape === "leaf") {
+        context.save();
+        context.translate(particle.x, particle.y);
+        context.rotate(Math.atan2(particle.vy, particle.vx));
+        context.scale(1.6, 0.7);
+        context.beginPath();
+        context.arc(0, 0, particle.size, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      } else {
+        context.beginPath();
+        context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        context.fill();
+      }
+      particles.current[alive++] = particle;
+    }
+    particles.current.length = alive;
+    context.globalAlpha = 1;
+    if (alive) frame.current = requestAnimationFrame(renderFrame);
+    else {
+      running.current = false;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }, []);
+  useEffect(() => {
+    const canvas = canvasRef.current,
+      parent = canvas?.parentElement;
+    if (!canvas || !parent) return;
+    const resize = () => {
+      const rect = parent.getBoundingClientRect();
+      canvas.width = Math.ceil(rect.width);
+      canvas.height = Math.ceil(rect.height);
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(parent);
+    return () => observer.disconnect();
+  }, []);
+  useImperativeHandle(
+    ref,
+    () => ({
+      burst(bursts) {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const count = reducedMotion ? 2 : 4;
+        for (const burst of bursts) {
+          const colors = COLORS[burst.symbol] ?? ["#f3d14e", "#fff"],
+            amount = Math.max(2, Math.round(count * (burst.intensity ?? 1)));
+          for (
+            let index = 0;
+            index < amount && particles.current.length < 96;
+            index += 1
+          ) {
+            const angle = (Math.PI * 2 * index) / amount + Math.random() * 0.35,
+              speed = (1.2 + Math.random() * 1.8) / 2;
+            particles.current.push({
+              x: ((burst.column + 0.5) * canvas.width) / 6,
+              y: ((burst.row + 0.5) * canvas.height) / 5,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed - 0.5,
+              life: 30 + Math.random() * 18,
+              maxLife: 48,
+              color: colors[index % colors.length],
+              size: 1.5 + Math.random() * 2,
+              shape: index % 5 === 0 ? "leaf" : "dot",
+            });
+          }
+        }
+        if (!running.current) {
+          running.current = true;
+          frame.current = requestAnimationFrame(draw);
+        }
+      },
+      clear() {
+        particles.current = [];
+        cancelAnimationFrame(frame.current);
+        running.current = false;
+        canvasRef.current
+          ?.getContext("2d")
+          ?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      },
+      active() {
+        return particles.current.length;
+      },
+    }),
+    [draw, reducedMotion],
+  );
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(frame.current);
+      particles.current = [];
+    },
+    [],
+  );
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-30"
+    />
+  );
 });

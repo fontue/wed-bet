@@ -3,9 +3,107 @@ import { listTransactions } from "@/infrastructure/mock/store";
 import { currentUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
 
-const typeName: Record<string, string> = { INITIAL_BALANCE: "Стартовый баланс", BET: "Ставка", WIN: "Выигрыш", REFUND: "Возврат", BONUS: "Бонус", CASHBACK: "Компенсация", DUEL_STAKE: "Взнос в дуэль", DUEL_WIN: "Победа в дуэли", DUEL_REFUND: "Возврат дуэли", SLOT_BET: "Spin Sweet Lemonza", SLOT_WIN: "Выигрыш Sweet Lemonza", ADMIN_ADJUSTMENT: "Корректировка" };
+const typeName: Record<string, string> = {
+  INITIAL_BALANCE: "Стартовый баланс",
+  BET: "Ставка",
+  WIN: "Выигрыш",
+  REFUND: "Возврат",
+  BONUS: "Бонус",
+  CASHBACK: "Компенсация",
+  DUEL_STAKE: "Взнос в дуэль",
+  DUEL_WIN: "Победа в дуэли",
+  DUEL_REFUND: "Возврат дуэли",
+  SLOT_BET: "Spin Sweet Lemonza",
+  SLOT_WIN: "Выигрыш Sweet Lemonza",
+  ADMIN_ADJUSTMENT: "Корректировка",
+};
 export default async function ProfilePage() {
-  const user = await currentUser(); if (!user) return null;
+  const user = await currentUser();
+  if (!user) return null;
   const transactions = listTransactions(user.id);
-  return <div className="page-shell"><div className="grid gap-6 lg:grid-cols-[20rem_1fr]"><aside><section className="card overflow-hidden"><div className="bg-[#174b38] p-6 text-center text-white"><span className="mx-auto grid size-20 place-items-center rounded-full border-4 border-[#f2cf55] bg-white/10 text-2xl font-bold">{user.avatar}</span><h1 className="serif mt-4 text-2xl font-bold">{user.displayName}</h1><p className="mt-1 text-xs text-white/60">Стол {user.tableNumber ?? "—"} · {user.team ?? "без команды"}</p></div><div className="p-5"><p className="text-xs font-extrabold uppercase tracking-wider text-[#788179]">Доступный баланс</p><strong className="serif mt-1 block text-4xl text-[#174b38]">{formatLira(user.balance)}</strong><p className="mt-2 text-xs leading-relaxed text-[#798079]">Лиры нельзя купить или вывести — только получить от крупье, колеса или других игроков.</p><div className="mt-5"><LogoutButton /></div></div></section></aside><section><p className="eyebrow">Libro mastro</p><h2 className="serif mt-1 text-2xl font-bold">История операций</h2><div className="card mt-4 overflow-hidden">{transactions.map((transaction) => <div key={transaction.id} className="flex items-center gap-3 border-b border-[#174b38]/7 p-4 last:border-0"><span className={`grid size-10 shrink-0 place-items-center rounded-full text-lg ${transaction.amount >= 0 ? "bg-[#3f805e]/10 text-[#2d6d4c]" : "bg-[#a84735]/8 text-[#9b4636]"}`}>{transaction.amount >= 0 ? "+" : "−"}</span><div className="min-w-0 flex-1"><strong className="block text-sm">{typeName[transaction.type]}</strong><span className="block truncate text-xs text-[#7b827c]">{transaction.reason}</span></div><div className="text-right"><strong className={transaction.amount >= 0 ? "text-[#2f7251]" : "text-[#a84735]"}>{transaction.amount > 0 ? "+" : ""}{formatLira(transaction.amount)}</strong><small className="mt-1 block text-[#858b85]">{new Date(transaction.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</small></div></div>)}</div></section></div></div>;
+  return (
+    <div className="page-shell">
+      <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
+        <aside>
+          <section className="card overflow-hidden">
+            <div className="bg-[#174b38] p-6 text-center text-white">
+              <span className="mx-auto grid size-20 place-items-center rounded-full border-4 border-[#f2cf55] bg-white/10 text-2xl font-bold">
+                {user.avatar}
+              </span>
+              <h1 className="serif mt-4 text-2xl font-bold">
+                {user.displayName}
+              </h1>
+              <p className="mt-1 text-xs text-white/60">
+                Стол {user.tableNumber ?? "—"} · {user.team ?? "без команды"}
+              </p>
+            </div>
+            <div className="p-5">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-[#788179]">
+                Доступный баланс
+              </p>
+              <strong className="serif mt-1 block text-4xl text-[#174b38]">
+                {formatLira(user.balance)}
+              </strong>
+              <p className="mt-2 text-xs leading-relaxed text-[#798079]">
+                Лиры нельзя купить или вывести — только получить от крупье,
+                колеса или других игроков.
+              </p>
+              <div className="mt-5">
+                <LogoutButton />
+              </div>
+            </div>
+          </section>
+        </aside>
+        <section>
+          <p className="eyebrow">Libro mastro</p>
+          <h2 className="serif mt-1 text-2xl font-bold">История операций</h2>
+          <div className="card mt-4 overflow-hidden">
+            {transactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="flex items-center gap-3 border-b border-[#174b38]/7 p-4 last:border-0"
+              >
+                <span
+                  className={`grid size-10 shrink-0 place-items-center rounded-full text-lg ${transaction.amount >= 0 ? "bg-[#3f805e]/10 text-[#2d6d4c]" : "bg-[#a84735]/8 text-[#9b4636]"}`}
+                >
+                  {transaction.amount >= 0 ? "+" : "−"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <strong className="block text-sm">
+                    {typeName[transaction.type]}
+                  </strong>
+                  <span className="block truncate text-xs text-[#7b827c]">
+                    {transaction.reason}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <strong
+                    className={
+                      transaction.amount >= 0
+                        ? "text-[#2f7251]"
+                        : "text-[#a84735]"
+                    }
+                  >
+                    {transaction.amount > 0 ? "+" : ""}
+                    {formatLira(transaction.amount)}
+                  </strong>
+                  <small className="mt-1 block text-[#858b85]">
+                    {new Date(transaction.createdAt).toLocaleDateString(
+                      "ru-RU",
+                      {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )}
+                  </small>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
 }

@@ -14,17 +14,41 @@ const errors: Record<string, [string, number]> = {
 
 export async function GET() {
   const user = await currentUser();
-  if (!user || user.role !== "USER") return NextResponse.json({ error: "Требуется вход гостя" }, { status: 401 });
+  if (!user || user.role !== "USER")
+    return NextResponse.json(
+      { error: "Требуется вход гостя" },
+      { status: 401 },
+    );
   return NextResponse.json(getDuelState(user.id));
 }
 
 export async function POST(request: Request) {
   const user = await currentUser();
-  if (!user || user.role !== "USER") return NextResponse.json({ error: "Требуется вход гостя" }, { status: 401 });
+  if (!user || user.role !== "USER")
+    return NextResponse.json(
+      { error: "Требуется вход гостя" },
+      { status: 401 },
+    );
   try {
-    const body = (await request.json()) as { opponentId?: string; game?: DuelGame; idempotencyKey?: string };
-    if (!body.opponentId || !body.game || !body.idempotencyKey) return NextResponse.json({ error: "Неполные данные вызова" }, { status: 400 });
-    return NextResponse.json(createDuel({ challengerId: user.id, opponentId: body.opponentId, game: body.game, idempotencyKey: body.idempotencyKey }), { status: 201 });
+    const body = (await request.json()) as {
+      opponentId?: string;
+      game?: DuelGame;
+      idempotencyKey?: string;
+    };
+    if (!body.opponentId || !body.game || !body.idempotencyKey)
+      return NextResponse.json(
+        { error: "Неполные данные вызова" },
+        { status: 400 },
+      );
+    return NextResponse.json(
+      createDuel({
+        challengerId: user.id,
+        opponentId: body.opponentId,
+        game: body.game,
+        idempotencyKey: body.idempotencyKey,
+      }),
+      { status: 201 },
+    );
   } catch (error) {
     const code = error instanceof Error ? error.message : "UNKNOWN";
     const [message, status] = errors[code] ?? ["Не удалось создать дуэль", 400];

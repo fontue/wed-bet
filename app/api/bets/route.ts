@@ -12,14 +12,43 @@ const errorMessages: Record<string, [string, number]> = {
 
 export async function POST(request: Request) {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Требуется вход" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Требуется вход" }, { status: 401 });
   try {
-    const body = (await request.json()) as { eventId?: string; outcomeId?: string; amount?: number; idempotencyKey?: string; bonusId?: string };
-    if (!body.eventId || !body.outcomeId || !body.idempotencyKey || !body.amount) return NextResponse.json({ error: "Неполные данные ставки" }, { status: 400 });
-    return NextResponse.json(placeBet({ userId: user.id, eventId: body.eventId, outcomeId: body.outcomeId, amount: body.amount, idempotencyKey: body.idempotencyKey, bonusId: body.bonusId }), { status: 201 });
+    const body = (await request.json()) as {
+      eventId?: string;
+      outcomeId?: string;
+      amount?: number;
+      idempotencyKey?: string;
+      bonusId?: string;
+    };
+    if (
+      !body.eventId ||
+      !body.outcomeId ||
+      !body.idempotencyKey ||
+      !body.amount
+    )
+      return NextResponse.json(
+        { error: "Неполные данные ставки" },
+        { status: 400 },
+      );
+    return NextResponse.json(
+      placeBet({
+        userId: user.id,
+        eventId: body.eventId,
+        outcomeId: body.outcomeId,
+        amount: body.amount,
+        idempotencyKey: body.idempotencyKey,
+        bonusId: body.bonusId,
+      }),
+      { status: 201 },
+    );
   } catch (error) {
     const code = error instanceof Error ? error.message : "UNKNOWN";
-    const [message, status] = errorMessages[code] ?? ["Не удалось принять ставку", 400];
+    const [message, status] = errorMessages[code] ?? [
+      "Не удалось принять ставку",
+      400,
+    ];
     return NextResponse.json({ error: message }, { status });
   }
 }

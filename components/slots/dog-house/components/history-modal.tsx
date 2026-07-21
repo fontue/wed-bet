@@ -6,12 +6,240 @@ import type { DogHouseSpin } from "@/domain/slots/dog-house/types";
 import { DogHouseSymbolIcon } from "../../dog-house-symbol";
 import { useAccessibleDialog } from "../../shared/use-accessible-dialog";
 
-function MiniGrid({spin}:{spin:DogHouseSpin}){return <div className="dogslot-history-grid">{spin.grid.map((cell,index)=><i className={spin.stickyWilds.some((sticky)=>sticky.index===index)?"is-sticky":""} key={cell.id}><DogHouseSymbolIcon cell={cell}/></i>)}</div>}
-function Lines({spin}:{spin:DogHouseSpin}){return spin.wins.length?<div className="dogslot-history-lines">{spin.wins.map((line)=><div key={line.line}><b>Линия {line.line} · {line.symbol} ×{line.count}</b><span>{formatLira(line.basePayout)} · {line.wildMultiplier}X</span><strong>{formatLira(line.payout)}</strong></div>)}</div>:<p className="dogslot-history-empty">Выигрышных линий нет</p>}
+function MiniGrid({ spin }: { spin: DogHouseSpin }) {
+  return (
+    <div className="dogslot-history-grid">
+      {spin.grid.map((cell, index) => (
+        <i
+          className={
+            spin.stickyWilds.some((sticky) => sticky.index === index)
+              ? "is-sticky"
+              : ""
+          }
+          key={cell.id}
+        >
+          <DogHouseSymbolIcon cell={cell} />
+        </i>
+      ))}
+    </div>
+  );
+}
+function Lines({ spin }: { spin: DogHouseSpin }) {
+  return spin.wins.length ? (
+    <div className="dogslot-history-lines">
+      {spin.wins.map((line) => (
+        <div key={line.line}>
+          <b>
+            Линия {line.line} · {line.symbol} ×{line.count}
+          </b>
+          <span>
+            {formatLira(line.basePayout)} · {line.wildMultiplier}X
+          </span>
+          <strong>{formatLira(line.payout)}</strong>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="dogslot-history-empty">Выигрышных линий нет</p>
+  );
+}
 
-export function DogHouseHistoryModal({rounds,onClose}:{rounds:DogHouseSlotRound[];onClose:()=>void}){
-  const [selected,setSelected]=useState<DogHouseSlotRound>(),[tab,setTab]=useState<"base"|"reveal"|"free">("base"),[freeIndex,setFreeIndex]=useState(0),dialogRef=useRef<HTMLElement>(null),titleId=useId();
-  useAccessibleDialog(dialogRef,onClose);
-  const freeSpin=selected?.result.freeSpins[freeIndex],previousSticky=selected?.result.freeSpins[freeIndex-1]?.stickyWilds??[],newSticky=freeSpin?.stickyWilds.filter((item)=>!previousSticky.some((old)=>old.index===item.index))??[];
-  return <div className="dogslot-overlay" onMouseDown={(event)=>{if(event.currentTarget===event.target)onClose();}}><section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} className="dogslot-sheet dogslot-history-v2"><header><h2 id={titleId}>{selected?"Детали раунда":"Последние Spin"}</h2><button aria-label="Закрыть" onClick={onClose}>×</button></header>{selected?<div className="dogslot-history-detail"><button onClick={()=>setSelected(undefined)}>← Ко всем Spin</button><div className="dogslot-history-summary"><span>Ставка <b>{formatLira(selected.stake)}</b></span><span>Base <b>{formatLira(selected.baseWin+selected.scatterWin)}</b></span><span>Bonus <b>{formatLira(selected.bonusWin)}</b></span><span>Всего <b>{formatLira(selected.totalWin)}</b></span></div><nav className="dogslot-history-tabs" role="tablist" aria-label="Детали раунда"><button role="tab" aria-selected={tab==="base"} className={tab==="base"?"is-active":""} onClick={()=>setTab("base")}>Base</button>{selected.bonusTriggered&&<button role="tab" aria-selected={tab==="reveal"} className={tab==="reveal"?"is-active":""} onClick={()=>setTab("reveal")}>Bonus reveal</button>}{selected.result.freeSpins.length>0&&<button role="tab" aria-selected={tab==="free"} className={tab==="free"?"is-active":""} onClick={()=>setTab("free")}>Free spins</button>}</nav>{tab==="base"&&<section role="tabpanel"><MiniGrid spin={selected.result.base}/><Lines spin={selected.result.base}/></section>}{tab==="reveal"&&selected.bonusTriggered&&<section role="tabpanel" className="dogslot-history-reveal"><div>{(selected.result.freeSpinReveal??[]).map((value,index)=><i key={index}>{value}</i>)}</div><strong>Итого: {selected.result.awardedFreeSpins} фриспинов</strong></section>}{tab==="free"&&freeSpin&&<section role="tabpanel" className="dogslot-history-free"><div className="dogslot-history-spin-list">{selected.result.freeSpins.map((spin,index)=><button className={index===freeIndex?"is-active":""} key={index} onClick={()=>setFreeIndex(index)}>{index+1}<small>{formatLira(spin.payout)}</small></button>)}</div><MiniGrid spin={freeSpin}/><div className="dogslot-history-sticky"><span>Sticky: {(freeSpin.stickyWilds??[]).map((item)=>`${item.index+1} (${item.multiplier}X)`).join(", ")||"—"}</span><span>Новые: {newSticky.map((item)=>`${item.index+1} (${item.multiplier}X)`).join(", ")||"—"}</span><span>Max line: {Math.max(1,...(freeSpin.wins??[]).map((line)=>line.wildMultiplier))}X</span></div><Lines spin={freeSpin}/></section>}<small>Round ID: {selected.id}<br/>Math: {selected.mathVersion||selected.result.mathVersion||"legacy"}<br/>Баланс: {formatLira(selected.balanceBefore)} → {formatLira(selected.balanceAfter)}</small></div>:<div>{rounds.length?rounds.map((round)=><button className="dogslot-history-row" key={round.id} onClick={()=>{setSelected(round);setTab("base");setFreeIndex(0);}}><span>{new Date(round.createdAt).toLocaleString("ru-RU")}</span><b>{formatLira(round.stake)}</b><strong className={round.totalWin>0?"is-win":""}>{round.totalWin>0?`+${formatLira(round.totalWin)}`:"0"}</strong></button>):<p className="p-8 text-center text-sm">История пока пуста.</p>}</div>}</section></div>;
+export function DogHouseHistoryModal({
+  rounds,
+  onClose,
+}: {
+  rounds: DogHouseSlotRound[];
+  onClose: () => void;
+}) {
+  const [selected, setSelected] = useState<DogHouseSlotRound>(),
+    [tab, setTab] = useState<"base" | "reveal" | "free">("base"),
+    [freeIndex, setFreeIndex] = useState(0),
+    dialogRef = useRef<HTMLElement>(null),
+    titleId = useId();
+  useAccessibleDialog(dialogRef, onClose);
+  const freeSpin = selected?.result.freeSpins[freeIndex],
+    previousSticky =
+      selected?.result.freeSpins[freeIndex - 1]?.stickyWilds ?? [],
+    newSticky =
+      freeSpin?.stickyWilds.filter(
+        (item) => !previousSticky.some((old) => old.index === item.index),
+      ) ?? [];
+  return (
+    <div
+      className="dogslot-overlay"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <section
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="dogslot-sheet dogslot-history-v2"
+      >
+        <header>
+          <h2 id={titleId}>{selected ? "Детали раунда" : "Последние Spin"}</h2>
+          <button aria-label="Закрыть" onClick={onClose}>
+            ×
+          </button>
+        </header>
+        {selected ? (
+          <div className="dogslot-history-detail">
+            <button onClick={() => setSelected(undefined)}>
+              ← Ко всем Spin
+            </button>
+            <div className="dogslot-history-summary">
+              <span>
+                Ставка <b>{formatLira(selected.stake)}</b>
+              </span>
+              <span>
+                Base <b>{formatLira(selected.baseWin + selected.scatterWin)}</b>
+              </span>
+              <span>
+                Bonus <b>{formatLira(selected.bonusWin)}</b>
+              </span>
+              <span>
+                Всего <b>{formatLira(selected.totalWin)}</b>
+              </span>
+            </div>
+            <nav
+              className="dogslot-history-tabs"
+              role="tablist"
+              aria-label="Детали раунда"
+            >
+              <button
+                role="tab"
+                aria-selected={tab === "base"}
+                className={tab === "base" ? "is-active" : ""}
+                onClick={() => setTab("base")}
+              >
+                Base
+              </button>
+              {selected.bonusTriggered && (
+                <button
+                  role="tab"
+                  aria-selected={tab === "reveal"}
+                  className={tab === "reveal" ? "is-active" : ""}
+                  onClick={() => setTab("reveal")}
+                >
+                  Bonus reveal
+                </button>
+              )}
+              {selected.result.freeSpins.length > 0 && (
+                <button
+                  role="tab"
+                  aria-selected={tab === "free"}
+                  className={tab === "free" ? "is-active" : ""}
+                  onClick={() => setTab("free")}
+                >
+                  Free spins
+                </button>
+              )}
+            </nav>
+            {tab === "base" && (
+              <section role="tabpanel">
+                <MiniGrid spin={selected.result.base} />
+                <Lines spin={selected.result.base} />
+              </section>
+            )}
+            {tab === "reveal" && selected.bonusTriggered && (
+              <section role="tabpanel" className="dogslot-history-reveal">
+                <div>
+                  {(selected.result.freeSpinReveal ?? []).map(
+                    (value, index) => (
+                      <i key={index}>{value}</i>
+                    ),
+                  )}
+                </div>
+                <strong>
+                  Итого: {selected.result.awardedFreeSpins} фриспинов
+                </strong>
+              </section>
+            )}
+            {tab === "free" && freeSpin && (
+              <section role="tabpanel" className="dogslot-history-free">
+                <div className="dogslot-history-spin-list">
+                  {selected.result.freeSpins.map((spin, index) => (
+                    <button
+                      className={index === freeIndex ? "is-active" : ""}
+                      key={index}
+                      onClick={() => setFreeIndex(index)}
+                    >
+                      {index + 1}
+                      <small>{formatLira(spin.payout)}</small>
+                    </button>
+                  ))}
+                </div>
+                <MiniGrid spin={freeSpin} />
+                <div className="dogslot-history-sticky">
+                  <span>
+                    Sticky:{" "}
+                    {(freeSpin.stickyWilds ?? [])
+                      .map((item) => `${item.index + 1} (${item.multiplier}X)`)
+                      .join(", ") || "—"}
+                  </span>
+                  <span>
+                    Новые:{" "}
+                    {newSticky
+                      .map((item) => `${item.index + 1} (${item.multiplier}X)`)
+                      .join(", ") || "—"}
+                  </span>
+                  <span>
+                    Max line:{" "}
+                    {Math.max(
+                      1,
+                      ...(freeSpin.wins ?? []).map(
+                        (line) => line.wildMultiplier,
+                      ),
+                    )}
+                    X
+                  </span>
+                </div>
+                <Lines spin={freeSpin} />
+              </section>
+            )}
+            <small>
+              Round ID: {selected.id}
+              <br />
+              Math:{" "}
+              {selected.mathVersion || selected.result.mathVersion || "legacy"}
+              <br />
+              Баланс: {formatLira(selected.balanceBefore)} →{" "}
+              {formatLira(selected.balanceAfter)}
+            </small>
+          </div>
+        ) : (
+          <div>
+            {rounds.length ? (
+              rounds.map((round) => (
+                <button
+                  className="dogslot-history-row"
+                  key={round.id}
+                  onClick={() => {
+                    setSelected(round);
+                    setTab("base");
+                    setFreeIndex(0);
+                  }}
+                >
+                  <span>
+                    {new Date(round.createdAt).toLocaleString("ru-RU")}
+                  </span>
+                  <b>{formatLira(round.stake)}</b>
+                  <strong className={round.totalWin > 0 ? "is-win" : ""}>
+                    {round.totalWin > 0
+                      ? `+${formatLira(round.totalWin)}`
+                      : "0"}
+                  </strong>
+                </button>
+              ))
+            ) : (
+              <p className="p-8 text-center text-sm">История пока пуста.</p>
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  );
 }

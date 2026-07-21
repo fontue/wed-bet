@@ -1,14 +1,20 @@
-import type { LemonzaMode, LemonzaRoundResult } from "./slots/sweet-lemonza/types";
+import type {
+  LemonzaMode,
+  LemonzaRoundResult,
+} from "./slots/sweet-lemonza/types";
 import type { DogHouseRoundResult } from "./slots/dog-house/types";
 
 export type UserRole = "USER" | "ADMIN";
 export type UserStatus = "ACTIVE" | "BLOCKED";
-export type EventStatus = "DRAFT" | "OPEN" | "CLOSED" | "RESOLVED" | "CANCELLED";
+export type EventStatus =
+  "DRAFT" | "OPEN" | "CLOSED" | "RESOLVED" | "CANCELLED";
 export type BetStatus = "ACCEPTED" | "WON" | "LOST" | "REFUNDED";
-export type BonusKind = "LIRA" | "FREE_BET" | "MULTIPLIER" | "CASHBACK" | "NONE";
+export type BonusKind =
+  "LIRA" | "FREE_BET" | "MULTIPLIER" | "CASHBACK" | "NONE";
 export type BonusStatus = "AVAILABLE" | "RESERVED" | "USED" | "EXPIRED";
 export type DuelGame = "HIGH_CARD" | "DICE" | "SLOTS";
-export type DuelStatus = "PENDING" | "RESOLVED" | "DECLINED" | "CANCELLED" | "EXPIRED";
+export type DuelStatus =
+  "PENDING" | "RESOLVED" | "DECLINED" | "CANCELLED" | "EXPIRED";
 
 export interface PlayingCard {
   rank: number;
@@ -29,7 +35,8 @@ export interface DiceDuelResult {
   redraws: number;
 }
 
-export type SlotSymbol = "LEMON" | "GLASS" | "HEART" | "RING" | "CROWN" | "BOUQUET";
+export type SlotSymbol =
+  "LEMON" | "GLASS" | "HEART" | "RING" | "CROWN" | "BOUQUET";
 
 export interface SlotDuelResult {
   game: "SLOTS";
@@ -85,27 +92,27 @@ export interface SlotRound {
 }
 
 export interface DogHouseSlotRound {
-  id:string;
-  gameId:"casa-degli-sposi";
-  mathVersion:string;
-  userId:string;
-  stake:number;
-  mode:"STANDARD";
-  chargedAmount:number;
-  baseWin:number;
-  scatterWin:number;
-  bonusWin:number;
-  totalWin:number;
-  balanceBefore:number;
-  balanceAfter:number;
-  bonusTriggered:boolean;
-  maxMultiplier:number;
-  idempotencyKey:string;
-  result:DogHouseRoundResult;
-  createdAt:string;
+  id: string;
+  gameId: "casa-degli-sposi";
+  mathVersion: string;
+  userId: string;
+  stake: number;
+  mode: "STANDARD";
+  chargedAmount: number;
+  baseWin: number;
+  scatterWin: number;
+  bonusWin: number;
+  totalWin: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  bonusTriggered: boolean;
+  maxMultiplier: number;
+  idempotencyKey: string;
+  result: DogHouseRoundResult;
+  createdAt: string;
 }
 
-export type AnySlotRound=SlotRound|DogHouseSlotRound;
+export type AnySlotRound = SlotRound | DogHouseSlotRound;
 
 export interface SlotOperationalSettings {
   gameId: "sweet-lemonza";
@@ -119,12 +126,12 @@ export interface SlotOperationalSettings {
 }
 
 export interface DogHouseOperationalSettings {
-  gameId:"casa-degli-sposi";
-  enabled:boolean;
-  spinsEnabled:boolean;
-  allowedBets:number[];
-  minBet:number;
-  maxBet:number;
+  gameId: "casa-degli-sposi";
+  enabled: boolean;
+  spinsEnabled: boolean;
+  allowedBets: number[];
+  minBet: number;
+  maxBet: number;
 }
 
 export interface User {

@@ -1,4 +1,66 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-export function NewsEditor() { const router = useRouter(); const [open, setOpen] = useState(false); const [error, setError] = useState(""); async function submit(form: FormData) { const response = await fetch("/api/admin/news", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(form)) }); if (!response.ok) { setError("Заполните заголовок и текст"); return; } setOpen(false); router.refresh(); } return <>{!open ? <button className="btn-primary" onClick={() => setOpen(true)}>+ Новый инсайд</button> : <form action={(data) => void submit(data)} className="card mt-5 max-w-xl space-y-3 p-5"><div className="grid grid-cols-[4rem_1fr] gap-2"><input className="input text-center text-xl" name="emoji" defaultValue="🍋" /><input className="input" name="title" required placeholder="Заголовок" /></div><textarea className="input min-h-28" name="body" required placeholder="Короткий текст новости" />{error && <p className="text-sm font-bold text-[#a84735]">{error}</p>}<div className="flex gap-2"><button type="button" className="btn-secondary" onClick={() => setOpen(false)}>Отмена</button><button className="btn-primary">Опубликовать</button></div></form>}</>; }
+export function NewsEditor() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState("");
+  async function submit(form: FormData) {
+    const response = await fetch("/api/admin/news", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(Object.fromEntries(form)),
+    });
+    if (!response.ok) {
+      setError("Заполните заголовок и текст");
+      return;
+    }
+    setOpen(false);
+    router.refresh();
+  }
+  return (
+    <>
+      {!open ? (
+        <button className="btn-primary" onClick={() => setOpen(true)}>
+          + Новый инсайд
+        </button>
+      ) : (
+        <form
+          action={(data) => void submit(data)}
+          className="card mt-5 max-w-xl space-y-3 p-5"
+        >
+          <div className="grid grid-cols-[4rem_1fr] gap-2">
+            <input
+              className="input text-center text-xl"
+              name="emoji"
+              defaultValue="🍋"
+            />
+            <input
+              className="input"
+              name="title"
+              required
+              placeholder="Заголовок"
+            />
+          </div>
+          <textarea
+            className="input min-h-28"
+            name="body"
+            required
+            placeholder="Короткий текст новости"
+          />
+          {error && <p className="text-sm font-bold text-[#a84735]">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setOpen(false)}
+            >
+              Отмена
+            </button>
+            <button className="btn-primary">Опубликовать</button>
+          </div>
+        </form>
+      )}
+    </>
+  );
+}

@@ -1,29 +1,496 @@
 import { memo } from "react";
-import type { LemonzaCell, LemonzaSymbol } from "@/domain/slots/sweet-lemonza/types";
+import type {
+  LemonzaCell,
+  LemonzaSymbol,
+} from "@/domain/slots/sweet-lemonza/types";
 
-export const LEMONZA_VISUAL_META: Record<LemonzaSymbol, { label: string; colors: [string, string] }> = {
-  LIMONCELLO: { label: "Лимончелло", colors: ["#f8d44e", "#39795d"] }, RINGS: { label: "Кольца", colors: ["#e2ad42", "#fff0af"] },
-  WINE: { label: "Вино", colors: ["#416f58", "#173f35"] }, PROSECCO: { label: "Просекко", colors: ["#f5d978", "#d9a448"] },
-  CAKE: { label: "Торт", colors: ["#fff6dc", "#e0a8ad"] }, BOUQUET: { label: "Букет", colors: ["#eaa0a8", "#6b9b68"] },
-  LEMON: { label: "Лимон", colors: ["#f4d33f", "#75a34f"] }, GRAPES: { label: "Виноград", colors: ["#7b5a96", "#55416e"] },
-  OLIVES: { label: "Оливки", colors: ["#71854b", "#425d38"] }, SCATTER: { label: "Amore", colors: ["#e4ac3d", "#b55b48"] },
+export const LEMONZA_VISUAL_META: Record<
+  LemonzaSymbol,
+  { label: string; colors: [string, string] }
+> = {
+  LIMONCELLO: { label: "Лимончелло", colors: ["#f8d44e", "#39795d"] },
+  RINGS: { label: "Кольца", colors: ["#e2ad42", "#fff0af"] },
+  WINE: { label: "Вино", colors: ["#416f58", "#173f35"] },
+  PROSECCO: { label: "Просекко", colors: ["#f5d978", "#d9a448"] },
+  CAKE: { label: "Торт", colors: ["#fff6dc", "#e0a8ad"] },
+  BOUQUET: { label: "Букет", colors: ["#eaa0a8", "#6b9b68"] },
+  LEMON: { label: "Лимон", colors: ["#f4d33f", "#75a34f"] },
+  GRAPES: { label: "Виноград", colors: ["#7b5a96", "#55416e"] },
+  OLIVES: { label: "Оливки", colors: ["#71854b", "#425d38"] },
+  SCATTER: { label: "Amore", colors: ["#e4ac3d", "#b55b48"] },
   MULTIPLIER: { label: "Множитель", colors: ["#f3d44f", "#28735a"] },
 };
 
-export const LemonzaSymbolIcon=memo(function LemonzaSymbolIcon({ cell, className = "" }: { cell: LemonzaCell; className?: string }) {
+export const LemonzaSymbolIcon = memo(function LemonzaSymbolIcon({
+  cell,
+  className = "",
+}: {
+  cell: LemonzaCell;
+  className?: string;
+}) {
   const [primary, secondary] = LEMONZA_VISUAL_META[cell.symbol].colors;
-  const common = { stroke: "#173c2f", strokeWidth: 2.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  return <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label={cell.symbol === "MULTIPLIER" ? `Множитель ${cell.multiplier}` : LEMONZA_VISUAL_META[cell.symbol].label} className={className}>
-    {cell.symbol === "LEMON" && <><path d="M35 29c-2-13 8-21 21-19-1 11-8 18-21 19Z" fill="#65944d" {...common}/><path d="M42 28c11-10 23-10 33-2-7 9-18 12-33 2Z" fill="#7da858" {...common}/><ellipse cx="35" cy="51" rx="24" ry="19" fill={primary} transform="rotate(-18 35 51)" {...common}/><ellipse cx="29" cy="44" rx="9" ry="5" fill="#fff2a0" opacity=".55" transform="rotate(-18 29 44)"/><path d="M18 50c10-6 21-9 34-7" fill="none" stroke="#fff2a0" strokeWidth="3" opacity=".72"/><circle cx="65" cy="63" r="22" fill="#fff4b1" {...common}/><circle cx="65" cy="63" r="17" fill="#f4d33f" stroke="#e2b52f" strokeWidth="1.5"/><path d="M65 46v34M48 63h34M53 51l24 24M77 51 53 75" fill="none" stroke="#fff3a4" strokeWidth="2"/><circle cx="65" cy="63" r="3" fill="#fff7cf"/></>}
-    {cell.symbol === "GRAPES" && <><path d="M52 20c7-8 13-9 20-7" fill="none" {...common}/><path d="M49 24c-7-10-18-9-25-2 8 8 17 9 25 2Z" fill="#6b9b57" {...common}/>{[[42,39],[58,39],[34,52],[50,52],[66,52],[42,65],[58,65],[50,78]].map(([x,y],i)=><g key={i}><circle cx={x} cy={y} r="11" fill={i%3===0?secondary:primary} {...common}/><circle cx={x-3} cy={y-3} r="3.2" fill="#d8c8e5" opacity=".62"/></g>)}</>}
-    {cell.symbol === "OLIVES" && <><path d="M24 73c18-35 36-45 57-50" fill="none" {...common}/>{[[33,61],[48,47],[63,34],[57,65],[72,51]].map(([x,y],i)=><g key={i}><ellipse cx={x} cy={y} rx="13" ry="9" transform={`rotate(-35 ${x} ${y})`} fill={i%2?secondary:primary} {...common}/><ellipse cx={x-3} cy={y-2} rx="4" ry="2" transform={`rotate(-35 ${x} ${y})`} fill="#c3d39d" opacity=".48"/></g>)}<path d="M33 49c-12-9-20-5-24 3 9 6 17 5 24-3ZM61 28c-7-11-16-11-23-5 6 8 13 10 23 5Z" fill="#7fa05d" {...common}/></>}
-    {cell.symbol === "LIMONCELLO" && <><path d="M41 10h18v17l7 9v45c0 6-4 9-9 9H43c-5 0-9-3-9-9V36l7-9Z" fill="#fff0a2" {...common}/><path d="M35 43h30v38c0 5-3 7-8 7H43c-5 0-8-2-8-7Z" fill={primary}/><path d="M39 36c-2 13-2 31-1 45" fill="none" stroke="#fffbdc" strokeWidth="3" opacity=".75"/><path d="M40 9h20v12H40Z" fill="#b7894c" {...common}/><path d="M43 8h14v6H43Z" fill="#e1bd77" stroke="#7d5c35" strokeWidth="2"/><rect x="37" y="48" width="26" height="27" rx="5" fill="#286f95" stroke="#174b38" strokeWidth="2"/><circle cx="50" cy="61" r="9" fill="#fff8d5" stroke="#d7ad3e" strokeWidth="1.5"/><ellipse cx="50" cy="61" rx="6" ry="4.5" fill="#f3d33f" transform="rotate(-18 50 61)"/><path d="M50 56v10M45 61h10" fill="none" stroke="#fff4a2" strokeWidth="1.2"/><path d="M42 79h16" fill="none" stroke="#d7a72f" strokeWidth="2"/><path d="M62 31c8-8 16-7 21-1-6 7-13 8-21 1Z" fill="#6f9a53" {...common}/><circle cx="73" cy="39" r="7" fill="#f3d33f" stroke="#c79a32" strokeWidth="2"/><path d="M69 38h8" stroke="#fff1a0" strokeWidth="1.5"/></>}
-    {cell.symbol === "RINGS" && <><circle cx="40" cy="57" r="24" fill="none" stroke={primary} strokeWidth="10"/><circle cx="62" cy="48" r="23" fill="none" stroke="#f0c65d" strokeWidth="9"/><path d="m62 20 7 10-7 8-7-8Z" fill="#d9f3ff" stroke="#6b8390" strokeWidth="2"/><path d="M25 44c8-10 17-13 27-11" fill="none" stroke="#fff4b1" strokeWidth="3"/></>}
-    {cell.symbol === "WINE" && <><path d="M42 12h16v16l7 11v43c0 5-3 8-8 8H43c-5 0-8-3-8-8V39l7-11Z" fill={secondary} {...common}/><path d="M41 11h18v12H41Z" fill="#8f3542" {...common}/><path d="M43 31c-3 10-4 27-3 46" fill="none" stroke="#8fb29d" strokeWidth="3" opacity=".7"/><rect x="39" y="48" width="22" height="25" rx="3" fill="#fff1cf" stroke="#c89b53" strokeWidth="2"/><path d="M50 66c-9-6-9-13-4-14 3-1 4 1 4 3 1-2 3-4 6-3 5 2 4 9-6 14Z" fill="#a8444e"/><path d="M45 78h10" stroke="#c89b53" strokeWidth="2"/><circle cx="73" cy="61" r="6" fill="#7b5a96" {...common}/><circle cx="79" cy="68" r="6" fill="#69477f" {...common}/><circle cx="69" cy="70" r="6" fill="#8d6ba5" {...common}/><path d="M73 53c3-7 8-9 14-7" fill="none" stroke="#65944d" strokeWidth="3"/></>}
-    {cell.symbol === "PROSECCO" && <><path d="M24 17h25l-4 35c-1 9-16 9-17 0Z" fill="#d9f4f1" fillOpacity=".8" {...common}/><path d="M51 17h25l-4 35c-1 9-16 9-17 0Z" fill="#d9f4f1" fillOpacity=".8" {...common}/><path d="M28 36h17l-1 15c-1 7-14 7-15 0ZM55 36h17l-1 15c-1 7-14 7-15 0Z" fill={primary}/><path d="M36 60v19M63 60v19M25 80h23M52 80h23" fill="none" {...common}/><circle cx="36" cy="43" r="2" fill="#fff"/><circle cx="63" cy="48" r="2" fill="#fff"/></>}
-    {cell.symbol === "CAKE" && <><path d="M25 44h50v36H25Z" fill={primary} {...common}/><path d="M33 28h34v18H33Z" fill="#fff7e5" {...common}/><path d="M25 51c8 8 15-7 24 1s17-7 26 0" fill="none" stroke={secondary} strokeWidth="5"/><path d="M34 34c6 7 10-5 16 1s11-5 17 0" fill="none" stroke="#eab7b7" strokeWidth="4"/><path d="M50 28V17M45 20h10" {...common}/><circle cx="50" cy="14" r="4" fill="#f2d05a"/></>}
-    {cell.symbol === "BOUQUET" && <><path d="M38 59 49 87M61 58 49 87M28 50 49 87M72 49 49 87" fill="none" stroke="#5d8b58" strokeWidth="5"/>{[[28,43],[42,34],[57,35],[72,44],[48,52]].map(([x,y],i)=><g key={i}><circle cx={x} cy={y} r="13" fill={i%2?primary:secondary} {...common}/><circle cx={x} cy={y} r="4" fill="#f6d561"/></g>)}<path d="m39 70 10 7 11-8" fill="none" stroke="#f0c65d" strokeWidth="5"/></>}
-    {cell.symbol === "SCATTER" && <><circle cx="50" cy="50" r="38" fill={primary} stroke="#f7dc72" strokeWidth="4"/><circle cx="40" cy="35" r="11" fill="#fff1b0" opacity=".35"/><circle cx="50" cy="50" r="31" fill="#fff4d5" stroke="#b66a4f" strokeWidth="2" strokeDasharray="3 3"/><path d="M50 50C33 39 33 27 41 23c5-3 9 0 9 5 2-5 7-8 12-5 8 5 7 16-12 27Z" fill="#bd4e58" stroke="#7f3441" strokeWidth="2"/><path d="M17 51 8 57l9 7h66l9-7-9-6Z" fill="#d7a23b" stroke="#8e6428" strokeWidth="2"/><path d="M20 48h60v20H20Z" fill="#f5ce58" stroke="#8e6428" strokeWidth="2"/><text x="50" y="62" textAnchor="middle" fontFamily="Arial" fontWeight="900" fontSize="12" letterSpacing="1" fill="#633c2d">AMORE</text><path d="m29 77 5 5 5-5M61 77l5 5 5-5" fill="none" stroke="#b66a4f" strokeWidth="2"/></>}
-    {cell.symbol === "MULTIPLIER" && <><circle cx="50" cy="50" r="35" fill={primary} {...common}/><circle cx="40" cy="35" r="10" fill="#fff4ae" opacity=".35"/><circle cx="50" cy="50" r="27" fill="none" stroke="#fff4ae" strokeWidth="3" strokeDasharray="5 4"/><path d="M50 15c3-9 10-12 18-9-3 8-9 12-18 9Z" fill="#67944d" {...common}/><text x="50" y="59" textAnchor="middle" fontFamily="Arial" fontWeight="900" fontSize="25" fill="#174b38">{cell.multiplier}X</text></>}
-  </svg>;
+  const common = {
+    stroke: "#173c2f",
+    strokeWidth: 2.5,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label={
+        cell.symbol === "MULTIPLIER"
+          ? `Множитель ${cell.multiplier}`
+          : LEMONZA_VISUAL_META[cell.symbol].label
+      }
+      className={className}
+    >
+      {cell.symbol === "LEMON" && (
+        <>
+          <path
+            d="M35 29c-2-13 8-21 21-19-1 11-8 18-21 19Z"
+            fill="#65944d"
+            {...common}
+          />
+          <path
+            d="M42 28c11-10 23-10 33-2-7 9-18 12-33 2Z"
+            fill="#7da858"
+            {...common}
+          />
+          <ellipse
+            cx="35"
+            cy="51"
+            rx="24"
+            ry="19"
+            fill={primary}
+            transform="rotate(-18 35 51)"
+            {...common}
+          />
+          <ellipse
+            cx="29"
+            cy="44"
+            rx="9"
+            ry="5"
+            fill="#fff2a0"
+            opacity=".55"
+            transform="rotate(-18 29 44)"
+          />
+          <path
+            d="M18 50c10-6 21-9 34-7"
+            fill="none"
+            stroke="#fff2a0"
+            strokeWidth="3"
+            opacity=".72"
+          />
+          <circle cx="65" cy="63" r="22" fill="#fff4b1" {...common} />
+          <circle
+            cx="65"
+            cy="63"
+            r="17"
+            fill="#f4d33f"
+            stroke="#e2b52f"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M65 46v34M48 63h34M53 51l24 24M77 51 53 75"
+            fill="none"
+            stroke="#fff3a4"
+            strokeWidth="2"
+          />
+          <circle cx="65" cy="63" r="3" fill="#fff7cf" />
+        </>
+      )}
+      {cell.symbol === "GRAPES" && (
+        <>
+          <path d="M52 20c7-8 13-9 20-7" fill="none" {...common} />
+          <path
+            d="M49 24c-7-10-18-9-25-2 8 8 17 9 25 2Z"
+            fill="#6b9b57"
+            {...common}
+          />
+          {[
+            [42, 39],
+            [58, 39],
+            [34, 52],
+            [50, 52],
+            [66, 52],
+            [42, 65],
+            [58, 65],
+            [50, 78],
+          ].map(([x, y], i) => (
+            <g key={i}>
+              <circle
+                cx={x}
+                cy={y}
+                r="11"
+                fill={i % 3 === 0 ? secondary : primary}
+                {...common}
+              />
+              <circle
+                cx={x - 3}
+                cy={y - 3}
+                r="3.2"
+                fill="#d8c8e5"
+                opacity=".62"
+              />
+            </g>
+          ))}
+        </>
+      )}
+      {cell.symbol === "OLIVES" && (
+        <>
+          <path d="M24 73c18-35 36-45 57-50" fill="none" {...common} />
+          {[
+            [33, 61],
+            [48, 47],
+            [63, 34],
+            [57, 65],
+            [72, 51],
+          ].map(([x, y], i) => (
+            <g key={i}>
+              <ellipse
+                cx={x}
+                cy={y}
+                rx="13"
+                ry="9"
+                transform={`rotate(-35 ${x} ${y})`}
+                fill={i % 2 ? secondary : primary}
+                {...common}
+              />
+              <ellipse
+                cx={x - 3}
+                cy={y - 2}
+                rx="4"
+                ry="2"
+                transform={`rotate(-35 ${x} ${y})`}
+                fill="#c3d39d"
+                opacity=".48"
+              />
+            </g>
+          ))}
+          <path
+            d="M33 49c-12-9-20-5-24 3 9 6 17 5 24-3ZM61 28c-7-11-16-11-23-5 6 8 13 10 23 5Z"
+            fill="#7fa05d"
+            {...common}
+          />
+        </>
+      )}
+      {cell.symbol === "LIMONCELLO" && (
+        <>
+          <path
+            d="M41 10h18v17l7 9v45c0 6-4 9-9 9H43c-5 0-9-3-9-9V36l7-9Z"
+            fill="#fff0a2"
+            {...common}
+          />
+          <path d="M35 43h30v38c0 5-3 7-8 7H43c-5 0-8-2-8-7Z" fill={primary} />
+          <path
+            d="M39 36c-2 13-2 31-1 45"
+            fill="none"
+            stroke="#fffbdc"
+            strokeWidth="3"
+            opacity=".75"
+          />
+          <path d="M40 9h20v12H40Z" fill="#b7894c" {...common} />
+          <path
+            d="M43 8h14v6H43Z"
+            fill="#e1bd77"
+            stroke="#7d5c35"
+            strokeWidth="2"
+          />
+          <rect
+            x="37"
+            y="48"
+            width="26"
+            height="27"
+            rx="5"
+            fill="#286f95"
+            stroke="#174b38"
+            strokeWidth="2"
+          />
+          <circle
+            cx="50"
+            cy="61"
+            r="9"
+            fill="#fff8d5"
+            stroke="#d7ad3e"
+            strokeWidth="1.5"
+          />
+          <ellipse
+            cx="50"
+            cy="61"
+            rx="6"
+            ry="4.5"
+            fill="#f3d33f"
+            transform="rotate(-18 50 61)"
+          />
+          <path
+            d="M50 56v10M45 61h10"
+            fill="none"
+            stroke="#fff4a2"
+            strokeWidth="1.2"
+          />
+          <path d="M42 79h16" fill="none" stroke="#d7a72f" strokeWidth="2" />
+          <path
+            d="M62 31c8-8 16-7 21-1-6 7-13 8-21 1Z"
+            fill="#6f9a53"
+            {...common}
+          />
+          <circle
+            cx="73"
+            cy="39"
+            r="7"
+            fill="#f3d33f"
+            stroke="#c79a32"
+            strokeWidth="2"
+          />
+          <path d="M69 38h8" stroke="#fff1a0" strokeWidth="1.5" />
+        </>
+      )}
+      {cell.symbol === "RINGS" && (
+        <>
+          <circle
+            cx="40"
+            cy="57"
+            r="24"
+            fill="none"
+            stroke={primary}
+            strokeWidth="10"
+          />
+          <circle
+            cx="62"
+            cy="48"
+            r="23"
+            fill="none"
+            stroke="#f0c65d"
+            strokeWidth="9"
+          />
+          <path
+            d="m62 20 7 10-7 8-7-8Z"
+            fill="#d9f3ff"
+            stroke="#6b8390"
+            strokeWidth="2"
+          />
+          <path
+            d="M25 44c8-10 17-13 27-11"
+            fill="none"
+            stroke="#fff4b1"
+            strokeWidth="3"
+          />
+        </>
+      )}
+      {cell.symbol === "WINE" && (
+        <>
+          <path
+            d="M42 12h16v16l7 11v43c0 5-3 8-8 8H43c-5 0-8-3-8-8V39l7-11Z"
+            fill={secondary}
+            {...common}
+          />
+          <path d="M41 11h18v12H41Z" fill="#8f3542" {...common} />
+          <path
+            d="M43 31c-3 10-4 27-3 46"
+            fill="none"
+            stroke="#8fb29d"
+            strokeWidth="3"
+            opacity=".7"
+          />
+          <rect
+            x="39"
+            y="48"
+            width="22"
+            height="25"
+            rx="3"
+            fill="#fff1cf"
+            stroke="#c89b53"
+            strokeWidth="2"
+          />
+          <path
+            d="M50 66c-9-6-9-13-4-14 3-1 4 1 4 3 1-2 3-4 6-3 5 2 4 9-6 14Z"
+            fill="#a8444e"
+          />
+          <path d="M45 78h10" stroke="#c89b53" strokeWidth="2" />
+          <circle cx="73" cy="61" r="6" fill="#7b5a96" {...common} />
+          <circle cx="79" cy="68" r="6" fill="#69477f" {...common} />
+          <circle cx="69" cy="70" r="6" fill="#8d6ba5" {...common} />
+          <path
+            d="M73 53c3-7 8-9 14-7"
+            fill="none"
+            stroke="#65944d"
+            strokeWidth="3"
+          />
+        </>
+      )}
+      {cell.symbol === "PROSECCO" && (
+        <>
+          <path
+            d="M24 17h25l-4 35c-1 9-16 9-17 0Z"
+            fill="#d9f4f1"
+            fillOpacity=".8"
+            {...common}
+          />
+          <path
+            d="M51 17h25l-4 35c-1 9-16 9-17 0Z"
+            fill="#d9f4f1"
+            fillOpacity=".8"
+            {...common}
+          />
+          <path
+            d="M28 36h17l-1 15c-1 7-14 7-15 0ZM55 36h17l-1 15c-1 7-14 7-15 0Z"
+            fill={primary}
+          />
+          <path
+            d="M36 60v19M63 60v19M25 80h23M52 80h23"
+            fill="none"
+            {...common}
+          />
+          <circle cx="36" cy="43" r="2" fill="#fff" />
+          <circle cx="63" cy="48" r="2" fill="#fff" />
+        </>
+      )}
+      {cell.symbol === "CAKE" && (
+        <>
+          <path d="M25 44h50v36H25Z" fill={primary} {...common} />
+          <path d="M33 28h34v18H33Z" fill="#fff7e5" {...common} />
+          <path
+            d="M25 51c8 8 15-7 24 1s17-7 26 0"
+            fill="none"
+            stroke={secondary}
+            strokeWidth="5"
+          />
+          <path
+            d="M34 34c6 7 10-5 16 1s11-5 17 0"
+            fill="none"
+            stroke="#eab7b7"
+            strokeWidth="4"
+          />
+          <path d="M50 28V17M45 20h10" {...common} />
+          <circle cx="50" cy="14" r="4" fill="#f2d05a" />
+        </>
+      )}
+      {cell.symbol === "BOUQUET" && (
+        <>
+          <path
+            d="M38 59 49 87M61 58 49 87M28 50 49 87M72 49 49 87"
+            fill="none"
+            stroke="#5d8b58"
+            strokeWidth="5"
+          />
+          {[
+            [28, 43],
+            [42, 34],
+            [57, 35],
+            [72, 44],
+            [48, 52],
+          ].map(([x, y], i) => (
+            <g key={i}>
+              <circle
+                cx={x}
+                cy={y}
+                r="13"
+                fill={i % 2 ? primary : secondary}
+                {...common}
+              />
+              <circle cx={x} cy={y} r="4" fill="#f6d561" />
+            </g>
+          ))}
+          <path
+            d="m39 70 10 7 11-8"
+            fill="none"
+            stroke="#f0c65d"
+            strokeWidth="5"
+          />
+        </>
+      )}
+      {cell.symbol === "SCATTER" && (
+        <>
+          <circle
+            cx="50"
+            cy="50"
+            r="38"
+            fill={primary}
+            stroke="#f7dc72"
+            strokeWidth="4"
+          />
+          <circle cx="40" cy="35" r="11" fill="#fff1b0" opacity=".35" />
+          <circle
+            cx="50"
+            cy="50"
+            r="31"
+            fill="#fff4d5"
+            stroke="#b66a4f"
+            strokeWidth="2"
+            strokeDasharray="3 3"
+          />
+          <path
+            d="M50 50C33 39 33 27 41 23c5-3 9 0 9 5 2-5 7-8 12-5 8 5 7 16-12 27Z"
+            fill="#bd4e58"
+            stroke="#7f3441"
+            strokeWidth="2"
+          />
+          <path
+            d="M17 51 8 57l9 7h66l9-7-9-6Z"
+            fill="#d7a23b"
+            stroke="#8e6428"
+            strokeWidth="2"
+          />
+          <path
+            d="M20 48h60v20H20Z"
+            fill="#f5ce58"
+            stroke="#8e6428"
+            strokeWidth="2"
+          />
+          <text
+            x="50"
+            y="62"
+            textAnchor="middle"
+            fontFamily="Arial"
+            fontWeight="900"
+            fontSize="12"
+            letterSpacing="1"
+            fill="#633c2d"
+          >
+            AMORE
+          </text>
+          <path
+            d="m29 77 5 5 5-5M61 77l5 5 5-5"
+            fill="none"
+            stroke="#b66a4f"
+            strokeWidth="2"
+          />
+        </>
+      )}
+      {cell.symbol === "MULTIPLIER" && (
+        <>
+          <circle cx="50" cy="50" r="35" fill={primary} {...common} />
+          <circle cx="40" cy="35" r="10" fill="#fff4ae" opacity=".35" />
+          <circle
+            cx="50"
+            cy="50"
+            r="27"
+            fill="none"
+            stroke="#fff4ae"
+            strokeWidth="3"
+            strokeDasharray="5 4"
+          />
+          <path
+            d="M50 15c3-9 10-12 18-9-3 8-9 12-18 9Z"
+            fill="#67944d"
+            {...common}
+          />
+          <text
+            x="50"
+            y="59"
+            textAnchor="middle"
+            fontFamily="Arial"
+            fontWeight="900"
+            fontSize="25"
+            fill="#174b38"
+          >
+            {cell.multiplier}X
+          </text>
+        </>
+      )}
+    </svg>
+  );
 });

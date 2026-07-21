@@ -1,11 +1,31 @@
-import type { LemonzaCascade, LemonzaPlay, LemonzaRoundResult } from "@/domain/slots/sweet-lemonza/types";
+import type {
+  LemonzaCascade,
+  LemonzaPlay,
+  LemonzaRoundResult,
+} from "@/domain/slots/sweet-lemonza/types";
 
 export type GameAnimationState =
-  | "idle" | "requesting-spin" | "anticipation" | "initial-drop" | "evaluating"
-  | "highlighting-win" | "showing-win-value" | "removing-symbols" | "collapsing-grid"
-  | "dropping-new-symbols" | "showing-scatter-result" | "entering-bonus"
-  | "playing-free-spin" | "revealing-multipliers" | "collecting-multiplier" | "applying-multipliers"
-  | "counting-win" | "showing-big-win" | "bonus-summary" | "round-complete" | "skipping";
+  | "idle"
+  | "requesting-spin"
+  | "anticipation"
+  | "initial-drop"
+  | "evaluating"
+  | "highlighting-win"
+  | "showing-win-value"
+  | "removing-symbols"
+  | "collapsing-grid"
+  | "dropping-new-symbols"
+  | "showing-scatter-result"
+  | "entering-bonus"
+  | "playing-free-spin"
+  | "revealing-multipliers"
+  | "collecting-multiplier"
+  | "applying-multipliers"
+  | "counting-win"
+  | "showing-big-win"
+  | "bonus-summary"
+  | "round-complete"
+  | "skipping";
 
 export interface AnimationStep {
   state: GameAnimationState;

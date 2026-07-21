@@ -4,7 +4,8 @@
  */
 export function createClientRequestId(): string {
   const webCrypto = globalThis.crypto;
-  if (typeof webCrypto?.randomUUID === "function") return webCrypto.randomUUID();
+  if (typeof webCrypto?.randomUUID === "function")
+    return webCrypto.randomUUID();
 
   if (typeof webCrypto?.getRandomValues === "function") {
     const bytes = webCrypto.getRandomValues(new Uint8Array(16));

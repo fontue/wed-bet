@@ -1,19 +1,190 @@
-import type { LemonzaCell, LemonzaCascade } from "@/domain/slots/sweet-lemonza/types";
-import { LEMONZA_COLUMNS, LEMONZA_ROWS } from "@/domain/slots/sweet-lemonza/config";
+import type {
+  LemonzaCell,
+  LemonzaCascade,
+} from "@/domain/slots/sweet-lemonza/types";
+import {
+  LEMONZA_COLUMNS,
+  LEMONZA_ROWS,
+} from "@/domain/slots/sweet-lemonza/config";
 
 export interface DisplaySymbol {
-  animationId:string; cell:LemonzaCell; row:number; column:number; previousRow?:number; previousColumn?:number;
-  isNew:boolean; isQueued:boolean; isLeaving:boolean; isWinning:boolean; isRemoving:boolean; isScatter:boolean; isMultiplier:boolean; isCollectingMultiplier?:boolean;
-  dropDistance:number; stableVariation:number;
+  animationId: string;
+  cell: LemonzaCell;
+  row: number;
+  column: number;
+  previousRow?: number;
+  previousColumn?: number;
+  isNew: boolean;
+  isQueued: boolean;
+  isLeaving: boolean;
+  isWinning: boolean;
+  isRemoving: boolean;
+  isScatter: boolean;
+  isMultiplier: boolean;
+  isCollectingMultiplier?: boolean;
+  dropDistance: number;
+  stableVariation: number;
 }
-const position=(index:number)=>({row:Math.floor(index/LEMONZA_COLUMNS),column:index%LEMONZA_COLUMNS});
-const variation=(id:number)=>((Math.imul(Math.abs(id),2654435761)>>>0)%1000)/1000;
+const position = (index: number) => ({
+  row: Math.floor(index / LEMONZA_COLUMNS),
+  column: index % LEMONZA_COLUMNS,
+});
+const variation = (id: number) =>
+  ((Math.imul(Math.abs(id), 2654435761) >>> 0) % 1000) / 1000;
 
-export function displayGrid(cells:LemonzaCell[],newIds:Set<number>=new Set(cells.map((cell)=>cell.id)),winningIds:Set<number>=new Set()):DisplaySymbol[]{return cells.map((cell,index)=>{const {row,column}=position(index);return{animationId:String(cell.id),cell,row,column,previousRow:row-LEMONZA_ROWS,previousColumn:column,isNew:newIds.has(cell.id),isQueued:false,isLeaving:false,isWinning:winningIds.has(cell.id),isRemoving:false,isScatter:cell.symbol==="SCATTER",isMultiplier:cell.symbol==="MULTIPLIER",dropDistance:LEMONZA_ROWS,stableVariation:variation(cell.id)};});}
-export function queueDisplayGrid(cells:LemonzaCell[]){return displayGrid(cells).map((symbol)=>({...symbol,isQueued:true}));}
-export function activateQueuedGrid(symbols:DisplaySymbol[]){return symbols.filter((symbol)=>symbol.isQueued).map((symbol)=>({...symbol,isQueued:false,isNew:true,isLeaving:false}));}
-export function markWinning(symbols:DisplaySymbol[],cascade:LemonzaCascade,removing=false){const ids=new Set(cascade.removedIndices.map((index)=>cascade.grid[index]?.id));return symbols.map((symbol)=>({...symbol,isWinning:ids.has(symbol.cell.id),isRemoving:removing&&ids.has(symbol.cell.id),isNew:false}));}
-const incomingCounts=(cascade:LemonzaCascade)=>{const counts=new Map<number,number>();for(const item of cascade.newSymbols){const column=item.index%LEMONZA_COLUMNS;counts.set(column,(counts.get(column)??0)+1);}return counts;};
-export function collapseSymbols(symbols:DisplaySymbol[],cascade:LemonzaCascade):DisplaySymbol[]{const survivors=new Map(symbols.filter((symbol)=>!symbol.isWinning).map((symbol)=>[symbol.cell.id,symbol])),counts=incomingCounts(cascade);return cascade.nextGrid.map((cell,index)=>{const old=survivors.get(cell.id),next=position(index);if(old)return{...old,previousRow:old.row,previousColumn:old.column,row:next.row,column:next.column,isQueued:false,isWinning:false,isRemoving:false,isNew:false,dropDistance:Math.max(0,next.row-old.row)};const dropDistance=counts.get(next.column)??1;return{...displayGrid([cell],new Set([cell.id]))[0],row:next.row,column:next.column,previousRow:next.row-dropDistance,previousColumn:next.column,isNew:true,isQueued:true,dropDistance};});}
-export function refillSymbols(symbols:DisplaySymbol[],cascade:LemonzaCascade):DisplaySymbol[]{const existing=new Map(symbols.map((symbol)=>[symbol.cell.id,symbol])),counts=incomingCounts(cascade);return cascade.nextGrid.map((cell,index)=>{const next=position(index),old=existing.get(cell.id);if(old?.isQueued)return{...old,row:next.row,column:next.column,isQueued:false,isNew:true};if(old)return{...old,row:next.row,column:next.column,previousRow:next.row,previousColumn:next.column,isQueued:false,isNew:false,dropDistance:0};const dropDistance=counts.get(next.column)??1;return{...displayGrid([cell],new Set([cell.id]))[0],row:next.row,column:next.column,previousRow:next.row-dropDistance,previousColumn:next.column,isNew:true,isQueued:false,dropDistance};});}
-export function finalDisplayGrid(round:{base?:{finalGrid:LemonzaCell[]};freeSpins:Array<{finalGrid:LemonzaCell[]}>},hideMultipliers=false){const cells=round.freeSpins.at(-1)?.finalGrid??round.base?.finalGrid??[],symbols=displayGrid(cells,new Set());return hideMultipliers?symbols.filter((symbol)=>!symbol.isMultiplier):symbols;}
+export function displayGrid(
+  cells: LemonzaCell[],
+  newIds: Set<number> = new Set(cells.map((cell) => cell.id)),
+  winningIds: Set<number> = new Set(),
+): DisplaySymbol[] {
+  return cells.map((cell, index) => {
+    const { row, column } = position(index);
+    return {
+      animationId: String(cell.id),
+      cell,
+      row,
+      column,
+      previousRow: row - LEMONZA_ROWS,
+      previousColumn: column,
+      isNew: newIds.has(cell.id),
+      isQueued: false,
+      isLeaving: false,
+      isWinning: winningIds.has(cell.id),
+      isRemoving: false,
+      isScatter: cell.symbol === "SCATTER",
+      isMultiplier: cell.symbol === "MULTIPLIER",
+      dropDistance: LEMONZA_ROWS,
+      stableVariation: variation(cell.id),
+    };
+  });
+}
+export function queueDisplayGrid(cells: LemonzaCell[]) {
+  return displayGrid(cells).map((symbol) => ({ ...symbol, isQueued: true }));
+}
+export function activateQueuedGrid(symbols: DisplaySymbol[]) {
+  return symbols
+    .filter((symbol) => symbol.isQueued)
+    .map((symbol) => ({
+      ...symbol,
+      isQueued: false,
+      isNew: true,
+      isLeaving: false,
+    }));
+}
+export function markWinning(
+  symbols: DisplaySymbol[],
+  cascade: LemonzaCascade,
+  removing = false,
+) {
+  const ids = new Set(
+    cascade.removedIndices.map((index) => cascade.grid[index]?.id),
+  );
+  return symbols.map((symbol) => ({
+    ...symbol,
+    isWinning: ids.has(symbol.cell.id),
+    isRemoving: removing && ids.has(symbol.cell.id),
+    isNew: false,
+  }));
+}
+const incomingCounts = (cascade: LemonzaCascade) => {
+  const counts = new Map<number, number>();
+  for (const item of cascade.newSymbols) {
+    const column = item.index % LEMONZA_COLUMNS;
+    counts.set(column, (counts.get(column) ?? 0) + 1);
+  }
+  return counts;
+};
+export function collapseSymbols(
+  symbols: DisplaySymbol[],
+  cascade: LemonzaCascade,
+): DisplaySymbol[] {
+  const survivors = new Map(
+      symbols
+        .filter((symbol) => !symbol.isWinning)
+        .map((symbol) => [symbol.cell.id, symbol]),
+    ),
+    counts = incomingCounts(cascade);
+  return cascade.nextGrid.map((cell, index) => {
+    const old = survivors.get(cell.id),
+      next = position(index);
+    if (old)
+      return {
+        ...old,
+        previousRow: old.row,
+        previousColumn: old.column,
+        row: next.row,
+        column: next.column,
+        isQueued: false,
+        isWinning: false,
+        isRemoving: false,
+        isNew: false,
+        dropDistance: Math.max(0, next.row - old.row),
+      };
+    const dropDistance = counts.get(next.column) ?? 1;
+    return {
+      ...displayGrid([cell], new Set([cell.id]))[0],
+      row: next.row,
+      column: next.column,
+      previousRow: next.row - dropDistance,
+      previousColumn: next.column,
+      isNew: true,
+      isQueued: true,
+      dropDistance,
+    };
+  });
+}
+export function refillSymbols(
+  symbols: DisplaySymbol[],
+  cascade: LemonzaCascade,
+): DisplaySymbol[] {
+  const existing = new Map(symbols.map((symbol) => [symbol.cell.id, symbol])),
+    counts = incomingCounts(cascade);
+  return cascade.nextGrid.map((cell, index) => {
+    const next = position(index),
+      old = existing.get(cell.id);
+    if (old?.isQueued)
+      return {
+        ...old,
+        row: next.row,
+        column: next.column,
+        isQueued: false,
+        isNew: true,
+      };
+    if (old)
+      return {
+        ...old,
+        row: next.row,
+        column: next.column,
+        previousRow: next.row,
+        previousColumn: next.column,
+        isQueued: false,
+        isNew: false,
+        dropDistance: 0,
+      };
+    const dropDistance = counts.get(next.column) ?? 1;
+    return {
+      ...displayGrid([cell], new Set([cell.id]))[0],
+      row: next.row,
+      column: next.column,
+      previousRow: next.row - dropDistance,
+      previousColumn: next.column,
+      isNew: true,
+      isQueued: false,
+      dropDistance,
+    };
+  });
+}
+export function finalDisplayGrid(
+  round: {
+    base?: { finalGrid: LemonzaCell[] };
+    freeSpins: Array<{ finalGrid: LemonzaCell[] }>;
+  },
+  hideMultipliers = false,
+) {
+  const cells =
+      round.freeSpins.at(-1)?.finalGrid ?? round.base?.finalGrid ?? [],
+    symbols = displayGrid(cells, new Set());
+  return hideMultipliers
+    ? symbols.filter((symbol) => !symbol.isMultiplier)
+    : symbols;
+}

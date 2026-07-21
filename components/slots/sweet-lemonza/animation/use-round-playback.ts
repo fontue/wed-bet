@@ -4,53 +4,618 @@ import type { SlotRound } from "@/domain/models";
 import { AnimationDirector } from "./director";
 import type { GameAnimationState } from "./states";
 import { animateNumber } from "./number-tween";
-import { activateQueuedGrid, collapseSymbols, displayGrid, finalDisplayGrid, markWinning, queueDisplayGrid, refillSymbols, type DisplaySymbol } from "./display-grid";
+import {
+  activateQueuedGrid,
+  collapseSymbols,
+  displayGrid,
+  finalDisplayGrid,
+  markWinning,
+  queueDisplayGrid,
+  refillSymbols,
+  type DisplaySymbol,
+} from "./display-grid";
 import type { SoundEvent } from "../audio/sound-manager";
 import { CompletionRegistry } from "../../shared/completion-registry";
 
-export interface PlaybackView {state:GameAnimationState;symbols:DisplaySymbol[];cascadeWin:number;displayWin:number;spinWin:number;freeSpinNumber:number;freeSpinTotal:number;bonusMode:boolean;scatterCount:number;isFreeSpin:boolean;multiplierValues:number[];multiplierTotal:number;multiplierWin:number;celebrationWin:number;cascadeIndex:number;shake:boolean;fastForwardSpin:boolean;round?:SlotRound;activeParticles:number;recoveryNotice?:string}
-const initial:PlaybackView={state:"idle",symbols:[],cascadeWin:0,displayWin:0,spinWin:0,freeSpinNumber:0,freeSpinTotal:0,bonusMode:false,scatterCount:0,isFreeSpin:false,multiplierValues:[],multiplierTotal:1,multiplierWin:0,celebrationWin:0,cascadeIndex:0,shake:false,fastForwardSpin:false,activeParticles:0};
-const afterBrowserPaint=()=>new Promise<void>((resolve)=>{let settled=false;const finish=()=>{if(settled)return;settled=true;window.clearTimeout(fallback);resolve();},fallback=window.setTimeout(finish,100);requestAnimationFrame(()=>requestAnimationFrame(finish));});
+export interface PlaybackView {
+  state: GameAnimationState;
+  symbols: DisplaySymbol[];
+  cascadeWin: number;
+  displayWin: number;
+  spinWin: number;
+  freeSpinNumber: number;
+  freeSpinTotal: number;
+  bonusMode: boolean;
+  scatterCount: number;
+  isFreeSpin: boolean;
+  multiplierValues: number[];
+  multiplierTotal: number;
+  multiplierWin: number;
+  celebrationWin: number;
+  cascadeIndex: number;
+  shake: boolean;
+  fastForwardSpin: boolean;
+  round?: SlotRound;
+  activeParticles: number;
+  recoveryNotice?: string;
+}
+const initial: PlaybackView = {
+  state: "idle",
+  symbols: [],
+  cascadeWin: 0,
+  displayWin: 0,
+  spinWin: 0,
+  freeSpinNumber: 0,
+  freeSpinTotal: 0,
+  bonusMode: false,
+  scatterCount: 0,
+  isFreeSpin: false,
+  multiplierValues: [],
+  multiplierTotal: 1,
+  multiplierWin: 0,
+  celebrationWin: 0,
+  cascadeIndex: 0,
+  shake: false,
+  fastForwardSpin: false,
+  activeParticles: 0,
+};
+const afterBrowserPaint = () =>
+  new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(fallback);
+        resolve();
+      },
+      fallback = window.setTimeout(finish, 100);
+    requestAnimationFrame(() => requestAnimationFrame(finish));
+  });
 
-export function useRoundPlayback({turbo,reducedMotion,onSound,onComplete}:{turbo:boolean;reducedMotion:boolean;onSound:(event:SoundEvent,pitch?:number)=>void;onComplete:(round:SlotRound)=>void}){
-  const [view,setView]=useState<PlaybackView>(initial),[director]=useState(()=>new AnimationDirector({turbo,reducedMotion})),accumulated=useRef(0),spinStart=useRef(0),tweenController=useRef<AbortController|undefined>(undefined),overlayResolver=useRef<(()=>void)|undefined>(undefined),completedRounds=useRef(new CompletionRegistry()),generation=useRef(0),mounted=useRef(true);
-  useEffect(()=>{director.setTurboMode(turbo);},[director,turbo]);useEffect(()=>{director.setReducedMotion(reducedMotion);},[director,reducedMotion]);
-  useEffect(()=>{mounted.current=true;director.activate();const visibility=()=>document.hidden?director.pause():director.resume();visibility();document.addEventListener("visibilitychange",visibility);return()=>{mounted.current=false;generation.current+=1;document.removeEventListener("visibilitychange",visibility);overlayResolver.current?.();overlayResolver.current=undefined;director.dispose();tweenController.current?.abort();};},[director]);
-  const setState=(state:GameAnimationState,patch:Partial<PlaybackView>={})=>setView((current)=>({...current,state,...patch}));
-  const countTo=useCallback(async(to:number,duration:number)=>{tweenController.current?.abort();const controller=new AbortController();tweenController.current=controller;const from=accumulated.current;await animateNumber({from,to,duration,reducedMotion,signal:controller.signal,onUpdate:(displayWin)=>setView((current)=>({...current,displayWin,spinWin:current.bonusMode?Math.max(0,displayWin-spinStart.current):0}))});accumulated.current=to;},[reducedMotion]);
-  const waitForOverlay=useCallback(async()=>{await new Promise<void>((resolve)=>{overlayResolver.current=resolve;});overlayResolver.current=undefined;},[]);
-  const settle=useCallback((round:SlotRound,recovered=false)=>{if(!mounted.current||!completedRounds.current.claim(round.id))return;tweenController.current?.abort();accumulated.current=round.totalWin;setView((current)=>({...current,state:"round-complete",symbols:finalDisplayGrid(round.result,true),displayWin:round.totalWin,spinWin:0,cascadeWin:0,scatterCount:0,multiplierValues:[],multiplierTotal:0,multiplierWin:0,celebrationWin:0,shake:false,fastForwardSpin:false,round,recoveryNotice:recovered?"Анимация была восстановлена":undefined}));onComplete(round);},[onComplete]);
-  const start=useCallback(async(round:SlotRound,visibleSymbols?:DisplaySymbol[])=>{const playbackId=++generation.current;overlayResolver.current?.();overlayResolver.current=undefined;accumulated.current=0;spinStart.current=0;tweenController.current?.abort();const firstPlay=round.result.base??round.result.freeSpins[0];setView((current)=>{const outgoing=(visibleSymbols??current.symbols).filter((symbol)=>!symbol.isQueued).map((symbol)=>({...symbol,animationId:`out-${round.id}-0-${symbol.animationId}`,isNew:false,isLeaving:false}));return{...initial,state:"anticipation",round,symbols:firstPlay?[...outgoing,...queueDisplayGrid(firstPlay.initialGrid)]:outgoing};});try{await afterBrowserPaint();if(playbackId!==generation.current)return;const bestSpin=Math.max(0,...round.result.freeSpins.map((play)=>play.totalPayout));await director.playRound(round.result,{onStep:async(step)=>{
-    if(playbackId!==generation.current||!mounted.current)return;
-    const basePatch={isFreeSpin:step.isFreeSpin,freeSpinNumber:step.freeSpinNumber??0,freeSpinTotal:step.freeSpinTotal??0,cascadeIndex:step.cascadeIndex??0};
-    switch(step.state){
-      case"anticipation":setView((current)=>{const outgoing=current.symbols.filter((symbol)=>!symbol.isLeaving&&!symbol.isQueued).map((symbol)=>({...symbol,isNew:false,isQueued:false,isLeaving:true,isWinning:false,isRemoving:false,isCollectingMultiplier:false})),queued=current.symbols.filter((symbol)=>symbol.isQueued);return{...current,...basePatch,state:step.state,symbols:[...outgoing,...(queued.length?queued:queueDisplayGrid(step.play.initialGrid))],cascadeWin:0,scatterCount:0,multiplierValues:[],multiplierTotal:0,multiplierWin:0,shake:false};});break;
-      case"playing-free-spin":onSound("free-spin-start");spinStart.current=accumulated.current;setView((current)=>{const outgoing=current.symbols.filter((symbol)=>!symbol.isQueued).map((symbol)=>({...symbol,animationId:`out-${round.id}-${step.playIndex}-${symbol.animationId}`,isNew:false,isLeaving:false}));return{...current,...basePatch,state:step.state,bonusMode:true,spinWin:0,symbols:[...outgoing,...queueDisplayGrid(step.play.initialGrid)]};});break;
-      case"initial-drop":onSound("symbols-drop");setView((current)=>{const queued=activateQueuedGrid(current.symbols);return{...current,...basePatch,state:step.state,symbols:queued.length?queued:displayGrid(step.play.initialGrid),cascadeWin:0};});break;
-      case"evaluating":setView((current)=>({...current,...basePatch,state:step.state,symbols:current.symbols.filter((symbol)=>!symbol.isLeaving).map((symbol)=>({...symbol,previousRow:symbol.row,previousColumn:symbol.column,dropDistance:0,isNew:false,isQueued:false,isLeaving:false,isWinning:false,isRemoving:false})),cascadeWin:0}));break;
-      case"highlighting-win":onSound("win-highlight",1+(step.cascadeIndex??0)*.04);setView((current)=>({...current,...basePatch,state:step.state,symbols:markWinning(current.symbols,step.cascade!),cascadeWin:step.cascade!.payout}));break;
-      case"showing-win-value":setState(step.state,{...basePatch,cascadeWin:step.cascade!.payout});await afterBrowserPaint();if(!reducedMotion)await new Promise<void>((resolve)=>window.setTimeout(resolve,turbo?45:130));await countTo(accumulated.current+step.cascade!.payout,director.timings.smallWinCount*step.cascadeSpeed);break;
-      case"removing-symbols":onSound("symbol-pop",1+(step.cascadeIndex??0)*.05);setView((current)=>({...current,...basePatch,state:step.state,symbols:markWinning(current.symbols,step.cascade!,true)}));break;
-      case"collapsing-grid":onSound("cascade",1+(step.cascadeIndex??0)*.05);setView((current)=>({...current,...basePatch,state:step.state,symbols:collapseSymbols(current.symbols,step.cascade!)}));break;
-      case"dropping-new-symbols":onSound("symbols-drop",1+(step.cascadeIndex??0)*.04);setView((current)=>({...current,...basePatch,state:step.state,symbols:refillSymbols(current.symbols,step.cascade!)}));break;
-      case"showing-scatter-result":{const event:SoundEvent=step.play.scatterCount>=3?"scatter-anticipation":step.play.scatterCount===2?"scatter-land-2":"scatter-land-1";onSound(event);if(!step.isFreeSpin&&step.play.scatterPayout){await countTo(accumulated.current+step.play.scatterPayout,director.timings.smallWinCount);}setState(step.state,{...basePatch,scatterCount:step.play.scatterCount});break;}
-      case"entering-bonus":onSound("bonus-trigger");setState(step.state,{...basePatch,bonusMode:true,scatterCount:0});await waitForOverlay();break;
-      case"revealing-multipliers":{const large=Math.max(...step.play.collectedMultipliers)>=20;onSound(large?"multiplier-land-large":"multiplier-land-small");setView((current)=>({...current,...basePatch,state:step.state,symbols:current.symbols.map((symbol)=>({...symbol,isCollectingMultiplier:false})),multiplierValues:[],multiplierTotal:0,multiplierWin:step.play.clusterPayout,shake:large}));break;}
-      case"collecting-multiplier":{onSound("multiplier-add",1+(step.multiplierIndex??0)*.04);const values=step.play.collectedMultipliers.slice(0,(step.multiplierIndex??0)+1),total=values.reduce((sum,value)=>sum+value,0);setView((current)=>{const remaining=current.symbols.filter((symbol)=>!symbol.isCollectingMultiplier),targetId=step.multiplierCellId??remaining.find((symbol)=>symbol.isMultiplier&&symbol.cell.multiplier===step.multiplierValue)?.cell.id;return{...current,...basePatch,state:step.state,symbols:remaining.map((symbol)=>({...symbol,isCollectingMultiplier:symbol.cell.id===targetId})),multiplierValues:values,multiplierTotal:total,multiplierWin:step.play.clusterPayout,shake:(step.multiplierValue??0)>=20};});break;}
-      case"applying-multipliers":onSound("multiplier-apply");setView((current)=>({...current,...basePatch,state:step.state,symbols:current.symbols.filter((symbol)=>!symbol.isMultiplier),multiplierValues:step.play.collectedMultipliers,multiplierTotal:step.play.appliedMultiplier,multiplierWin:step.play.clusterPayout,shake:step.play.appliedMultiplier>=20}));await afterBrowserPaint();await countTo(accumulated.current+step.play.clusterPayout*(step.play.appliedMultiplier-1),director.timings.multiplierApply);break;
-      case"bonus-summary":onSound("bonus-summary");setState(step.state,{...basePatch,bonusMode:true,multiplierWin:bestSpin});await waitForOverlay();break;
-      case"counting-win":{const ratio=round.totalWin/round.stake,duration=ratio>=10?director.timings.mediumWinCount:director.timings.smallWinCount;if(accumulated.current!==round.totalWin)await countTo(round.totalWin,duration);setState(step.state,basePatch);break;}
-      case"showing-big-win":onSound("big-win");setState(step.state,{...basePatch,celebrationWin:step.isFreeSpin?step.play.totalPayout:round.totalWin,shake:true});await waitForOverlay();break;
-      case"round-complete":setState(step.state,{...basePatch,symbols:finalDisplayGrid(round.result,true),displayWin:round.totalWin,spinWin:0,shake:false,fastForwardSpin:false});break;
-    }},onComplete:(kind)=>{if(playbackId===generation.current)settle(round);if(kind==="skipped")onSound("symbol-land");}});}catch{if(playbackId===generation.current&&mounted.current)settle(round,true);}},[countTo,director,onSound,reducedMotion,settle,turbo,waitForOverlay]);
-  const currentPlay=view.isFreeSpin?view.round?.result.freeSpins[view.freeSpinNumber-1]:view.round?.result.base;
-  const canSkip=Boolean(currentPlay&&!(["idle","requesting-spin","round-complete"] as GameAnimationState[]).includes(view.state));
-  const skip=useCallback(()=>{if(!canSkip)return;setView((current)=>({...current,state:"skipping",fastForwardSpin:true}));director.enableFastForwardForRound();if(overlayResolver.current){const resolve=overlayResolver.current;overlayResolver.current=undefined;resolve();}else director.accelerateCurrentPhase();},[canSkip,director]);
-  const continuePhase=useCallback(()=>{const resolve=overlayResolver.current;if(resolve){overlayResolver.current=undefined;resolve();return;}director.skipCurrentPhase();},[director]);
-  const requesting=useCallback(()=>setView((current)=>({...current,state:"requesting-spin",cascadeWin:0,displayWin:0,spinWin:0,celebrationWin:0,round:undefined})),[]);
-  const reset=useCallback(()=>setView((current)=>({...current,state:"idle",cascadeWin:0,spinWin:0,scatterCount:0,multiplierValues:[],multiplierTotal:0,multiplierWin:0,celebrationWin:0,shake:false,fastForwardSpin:false})),[]);
-  const setActiveParticles=useCallback((activeParticles:number)=>setView((current)=>({...current,activeParticles})),[]);
-  const recover=useCallback(()=>{if(view.round)settle(view.round,true);},[settle,view.round]);
-  const restoreFinal=useCallback((round:SlotRound)=>settle(round,true),[settle]);
-  return{view,start,skip,canSkip,continuePhase,requesting,reset,setActiveParticles,recover,restoreFinal};
+export function useRoundPlayback({
+  turbo,
+  reducedMotion,
+  onSound,
+  onComplete,
+}: {
+  turbo: boolean;
+  reducedMotion: boolean;
+  onSound: (event: SoundEvent, pitch?: number) => void;
+  onComplete: (round: SlotRound) => void;
+}) {
+  const [view, setView] = useState<PlaybackView>(initial),
+    [director] = useState(
+      () => new AnimationDirector({ turbo, reducedMotion }),
+    ),
+    accumulated = useRef(0),
+    spinStart = useRef(0),
+    tweenController = useRef<AbortController | undefined>(undefined),
+    overlayResolver = useRef<(() => void) | undefined>(undefined),
+    completedRounds = useRef(new CompletionRegistry()),
+    generation = useRef(0),
+    mounted = useRef(true);
+  useEffect(() => {
+    director.setTurboMode(turbo);
+  }, [director, turbo]);
+  useEffect(() => {
+    director.setReducedMotion(reducedMotion);
+  }, [director, reducedMotion]);
+  useEffect(() => {
+    mounted.current = true;
+    director.activate();
+    const visibility = () =>
+      document.hidden ? director.pause() : director.resume();
+    visibility();
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      mounted.current = false;
+      generation.current += 1;
+      document.removeEventListener("visibilitychange", visibility);
+      overlayResolver.current?.();
+      overlayResolver.current = undefined;
+      director.dispose();
+      tweenController.current?.abort();
+    };
+  }, [director]);
+  const setState = (
+    state: GameAnimationState,
+    patch: Partial<PlaybackView> = {},
+  ) => setView((current) => ({ ...current, state, ...patch }));
+  const countTo = useCallback(
+    async (to: number, duration: number) => {
+      tweenController.current?.abort();
+      const controller = new AbortController();
+      tweenController.current = controller;
+      const from = accumulated.current;
+      await animateNumber({
+        from,
+        to,
+        duration,
+        reducedMotion,
+        signal: controller.signal,
+        onUpdate: (displayWin) =>
+          setView((current) => ({
+            ...current,
+            displayWin,
+            spinWin: current.bonusMode
+              ? Math.max(0, displayWin - spinStart.current)
+              : 0,
+          })),
+      });
+      accumulated.current = to;
+    },
+    [reducedMotion],
+  );
+  const waitForOverlay = useCallback(async () => {
+    await new Promise<void>((resolve) => {
+      overlayResolver.current = resolve;
+    });
+    overlayResolver.current = undefined;
+  }, []);
+  const settle = useCallback(
+    (round: SlotRound, recovered = false) => {
+      if (!mounted.current || !completedRounds.current.claim(round.id)) return;
+      tweenController.current?.abort();
+      accumulated.current = round.totalWin;
+      setView((current) => ({
+        ...current,
+        state: "round-complete",
+        symbols: finalDisplayGrid(round.result, true),
+        displayWin: round.totalWin,
+        spinWin: 0,
+        cascadeWin: 0,
+        scatterCount: 0,
+        multiplierValues: [],
+        multiplierTotal: 0,
+        multiplierWin: 0,
+        celebrationWin: 0,
+        shake: false,
+        fastForwardSpin: false,
+        round,
+        recoveryNotice: recovered ? "Анимация была восстановлена" : undefined,
+      }));
+      onComplete(round);
+    },
+    [onComplete],
+  );
+  const start = useCallback(
+    async (round: SlotRound, visibleSymbols?: DisplaySymbol[]) => {
+      const playbackId = ++generation.current;
+      overlayResolver.current?.();
+      overlayResolver.current = undefined;
+      accumulated.current = 0;
+      spinStart.current = 0;
+      tweenController.current?.abort();
+      const firstPlay = round.result.base ?? round.result.freeSpins[0];
+      setView((current) => {
+        const outgoing = (visibleSymbols ?? current.symbols)
+          .filter((symbol) => !symbol.isQueued)
+          .map((symbol) => ({
+            ...symbol,
+            animationId: `out-${round.id}-0-${symbol.animationId}`,
+            isNew: false,
+            isLeaving: false,
+          }));
+        return {
+          ...initial,
+          state: "anticipation",
+          round,
+          symbols: firstPlay
+            ? [...outgoing, ...queueDisplayGrid(firstPlay.initialGrid)]
+            : outgoing,
+        };
+      });
+      try {
+        await afterBrowserPaint();
+        if (playbackId !== generation.current) return;
+        const bestSpin = Math.max(
+          0,
+          ...round.result.freeSpins.map((play) => play.totalPayout),
+        );
+        await director.playRound(round.result, {
+          onStep: async (step) => {
+            if (playbackId !== generation.current || !mounted.current) return;
+            const basePatch = {
+              isFreeSpin: step.isFreeSpin,
+              freeSpinNumber: step.freeSpinNumber ?? 0,
+              freeSpinTotal: step.freeSpinTotal ?? 0,
+              cascadeIndex: step.cascadeIndex ?? 0,
+            };
+            switch (step.state) {
+              case "anticipation":
+                setView((current) => {
+                  const outgoing = current.symbols
+                      .filter((symbol) => !symbol.isLeaving && !symbol.isQueued)
+                      .map((symbol) => ({
+                        ...symbol,
+                        isNew: false,
+                        isQueued: false,
+                        isLeaving: true,
+                        isWinning: false,
+                        isRemoving: false,
+                        isCollectingMultiplier: false,
+                      })),
+                    queued = current.symbols.filter(
+                      (symbol) => symbol.isQueued,
+                    );
+                  return {
+                    ...current,
+                    ...basePatch,
+                    state: step.state,
+                    symbols: [
+                      ...outgoing,
+                      ...(queued.length
+                        ? queued
+                        : queueDisplayGrid(step.play.initialGrid)),
+                    ],
+                    cascadeWin: 0,
+                    scatterCount: 0,
+                    multiplierValues: [],
+                    multiplierTotal: 0,
+                    multiplierWin: 0,
+                    shake: false,
+                  };
+                });
+                break;
+              case "playing-free-spin":
+                onSound("free-spin-start");
+                spinStart.current = accumulated.current;
+                setView((current) => {
+                  const outgoing = current.symbols
+                    .filter((symbol) => !symbol.isQueued)
+                    .map((symbol) => ({
+                      ...symbol,
+                      animationId: `out-${round.id}-${step.playIndex}-${symbol.animationId}`,
+                      isNew: false,
+                      isLeaving: false,
+                    }));
+                  return {
+                    ...current,
+                    ...basePatch,
+                    state: step.state,
+                    bonusMode: true,
+                    spinWin: 0,
+                    symbols: [
+                      ...outgoing,
+                      ...queueDisplayGrid(step.play.initialGrid),
+                    ],
+                  };
+                });
+                break;
+              case "initial-drop":
+                onSound("symbols-drop");
+                setView((current) => {
+                  const queued = activateQueuedGrid(current.symbols);
+                  return {
+                    ...current,
+                    ...basePatch,
+                    state: step.state,
+                    symbols: queued.length
+                      ? queued
+                      : displayGrid(step.play.initialGrid),
+                    cascadeWin: 0,
+                  };
+                });
+                break;
+              case "evaluating":
+                setView((current) => ({
+                  ...current,
+                  ...basePatch,
+                  state: step.state,
+                  symbols: current.symbols
+                    .filter((symbol) => !symbol.isLeaving)
+                    .map((symbol) => ({
+                      ...symbol,
+                      previousRow: symbol.row,
+                      previousColumn: symbol.column,
+                      dropDistance: 0,
+                      isNew: false,
+                      isQueued: false,
+                      isLeaving: false,
+                      isWinning: false,
+                      isRemoving: false,
+                    })),
+                  cascadeWin: 0,
+                }));
+                break;
+              case "highlighting-win":
+                onSound("win-highlight", 1 + (step.cascadeIndex ?? 0) * 0.04);
+                setView((current) => ({
+                  ...current,
+                  ...basePatch,
+                  state: step.state,
+                  symbols: markWinning(current.symbols, step.cascade!),
+                  cascadeWin: step.cascade!.payout,
+                }));
+                break;
+              case "showing-win-value":
+                setState(step.state, {
+                  ...basePatch,
+                  cascadeWin: step.cascade!.payout,
+                });
+                await afterBrowserPaint();
+                if (!reducedMotion)
+                  await new Promise<void>((resolve) =>
+                    window.setTimeout(resolve, turbo ? 45 : 130),
+                  );
+                await countTo(
+                  accumulated.current + step.cascade!.payout,
+                  director.timings.smallWinCount * step.cascadeSpeed,
+                );
+                break;
+              case "removing-symbols":
+                onSound("symbol-pop", 1 + (step.cascadeIndex ?? 0) * 0.05);
+                setView((current) => ({
+                  ...current,
+                  ...basePatch,
+                  state: step.state,
+                  symbols: markWinning(current.symbols, step.cascade!, true),
+                }));
+                break;
+              case "collapsing-grid":
+                onSound("cascade", 1 + (step.cascadeIndex ?? 0) * 0.05);
+                setView((current) => ({
+                  ...current,
+                  ...basePatch,
+                  state: step.state,
+                  symbols: collapseSymbols(current.symbols, step.cascade!),
+                }));
+                break;
+              case "dropping-new-symbols":
+                onSound("symbols-drop", 1 + (step.cascadeIndex ?? 0) * 0.04);
+                setView((current) => ({
+                  ...current,
+                  ...basePatch,
+                  state: step.state,
+                  symbols: refillSymbols(current.symbols, step.cascade!),
+                }));
+                break;
+              case "showing-scatter-result": {
+                const event: SoundEvent =
+                  step.play.scatterCount >= 3
+                    ? "scatter-anticipation"
+                    : step.play.scatterCount === 2
+                      ? "scatter-land-2"
+                      : "scatter-land-1";
+                onSound(event);
+                if (!step.isFreeSpin && step.play.scatterPayout) {
+                  await countTo(
+                    accumulated.current + step.play.scatterPayout,
+                    director.timings.smallWinCount,
+                  );
+                }
+                setState(step.state, {
+                  ...basePatch,
+                  scatterCount: step.play.scatterCount,
+                });
+                break;
+              }
+              case "entering-bonus":
+                onSound("bonus-trigger");
+                setState(step.state, {
+                  ...basePatch,
+                  bonusMode: true,
+                  scatterCount: 0,
+                });
+                await waitForOverlay();
+                break;
+              case "revealing-multipliers": {
+                const large = Math.max(...step.play.collectedMultipliers) >= 20;
+                onSound(
+                  large ? "multiplier-land-large" : "multiplier-land-small",
+                );
+                setView((current) => ({
+                  ...current,
+                  ...basePatch,
+                  state: step.state,
+                  symbols: current.symbols.map((symbol) => ({
+                    ...symbol,
+                    isCollectingMultiplier: false,
+                  })),
+                  multiplierValues: [],
+                  multiplierTotal: 0,
+                  multiplierWin: step.play.clusterPayout,
+                  shake: large,
+                }));
+                break;
+              }
+              case "collecting-multiplier": {
+                onSound(
+                  "multiplier-add",
+                  1 + (step.multiplierIndex ?? 0) * 0.04,
+                );
+                const values = step.play.collectedMultipliers.slice(
+                    0,
+                    (step.multiplierIndex ?? 0) + 1,
+                  ),
+                  total = values.reduce((sum, value) => sum + value, 0);
+                setView((current) => {
+                  const remaining = current.symbols.filter(
+                      (symbol) => !symbol.isCollectingMultiplier,
+                    ),
+                    targetId =
+                      step.multiplierCellId ??
+                      remaining.find(
+                        (symbol) =>
+                          symbol.isMultiplier &&
+                          symbol.cell.multiplier === step.multiplierValue,
+                      )?.cell.id;
+                  return {
+                    ...current,
+                    ...basePatch,
+                    state: step.state,
+                    symbols: remaining.map((symbol) => ({
+                      ...symbol,
+                      isCollectingMultiplier: symbol.cell.id === targetId,
+                    })),
+                    multiplierValues: values,
+                    multiplierTotal: total,
+                    multiplierWin: step.play.clusterPayout,
+                    shake: (step.multiplierValue ?? 0) >= 20,
+                  };
+                });
+                break;
+              }
+              case "applying-multipliers":
+                onSound("multiplier-apply");
+                setView((current) => ({
+                  ...current,
+                  ...basePatch,
+                  state: step.state,
+                  symbols: current.symbols.filter(
+                    (symbol) => !symbol.isMultiplier,
+                  ),
+                  multiplierValues: step.play.collectedMultipliers,
+                  multiplierTotal: step.play.appliedMultiplier,
+                  multiplierWin: step.play.clusterPayout,
+                  shake: step.play.appliedMultiplier >= 20,
+                }));
+                await afterBrowserPaint();
+                await countTo(
+                  accumulated.current +
+                    step.play.clusterPayout * (step.play.appliedMultiplier - 1),
+                  director.timings.multiplierApply,
+                );
+                break;
+              case "bonus-summary":
+                onSound("bonus-summary");
+                setState(step.state, {
+                  ...basePatch,
+                  bonusMode: true,
+                  multiplierWin: bestSpin,
+                });
+                await waitForOverlay();
+                break;
+              case "counting-win": {
+                const ratio = round.totalWin / round.stake,
+                  duration =
+                    ratio >= 10
+                      ? director.timings.mediumWinCount
+                      : director.timings.smallWinCount;
+                if (accumulated.current !== round.totalWin)
+                  await countTo(round.totalWin, duration);
+                setState(step.state, basePatch);
+                break;
+              }
+              case "showing-big-win":
+                onSound("big-win");
+                setState(step.state, {
+                  ...basePatch,
+                  celebrationWin: step.isFreeSpin
+                    ? step.play.totalPayout
+                    : round.totalWin,
+                  shake: true,
+                });
+                await waitForOverlay();
+                break;
+              case "round-complete":
+                setState(step.state, {
+                  ...basePatch,
+                  symbols: finalDisplayGrid(round.result, true),
+                  displayWin: round.totalWin,
+                  spinWin: 0,
+                  shake: false,
+                  fastForwardSpin: false,
+                });
+                break;
+            }
+          },
+          onComplete: (kind) => {
+            if (playbackId === generation.current) settle(round);
+            if (kind === "skipped") onSound("symbol-land");
+          },
+        });
+      } catch {
+        if (playbackId === generation.current && mounted.current)
+          settle(round, true);
+      }
+    },
+    [countTo, director, onSound, reducedMotion, settle, turbo, waitForOverlay],
+  );
+  const currentPlay = view.isFreeSpin
+    ? view.round?.result.freeSpins[view.freeSpinNumber - 1]
+    : view.round?.result.base;
+  const canSkip = Boolean(
+    currentPlay &&
+    !(
+      ["idle", "requesting-spin", "round-complete"] as GameAnimationState[]
+    ).includes(view.state),
+  );
+  const skip = useCallback(() => {
+    if (!canSkip) return;
+    setView((current) => ({
+      ...current,
+      state: "skipping",
+      fastForwardSpin: true,
+    }));
+    director.enableFastForwardForRound();
+    if (overlayResolver.current) {
+      const resolve = overlayResolver.current;
+      overlayResolver.current = undefined;
+      resolve();
+    } else director.accelerateCurrentPhase();
+  }, [canSkip, director]);
+  const continuePhase = useCallback(() => {
+    const resolve = overlayResolver.current;
+    if (resolve) {
+      overlayResolver.current = undefined;
+      resolve();
+      return;
+    }
+    director.skipCurrentPhase();
+  }, [director]);
+  const requesting = useCallback(
+    () =>
+      setView((current) => ({
+        ...current,
+        state: "requesting-spin",
+        cascadeWin: 0,
+        displayWin: 0,
+        spinWin: 0,
+        celebrationWin: 0,
+        round: undefined,
+      })),
+    [],
+  );
+  const reset = useCallback(
+    () =>
+      setView((current) => ({
+        ...current,
+        state: "idle",
+        cascadeWin: 0,
+        spinWin: 0,
+        scatterCount: 0,
+        multiplierValues: [],
+        multiplierTotal: 0,
+        multiplierWin: 0,
+        celebrationWin: 0,
+        shake: false,
+        fastForwardSpin: false,
+      })),
+    [],
+  );
+  const setActiveParticles = useCallback(
+    (activeParticles: number) =>
+      setView((current) => ({ ...current, activeParticles })),
+    [],
+  );
+  const recover = useCallback(() => {
+    if (view.round) settle(view.round, true);
+  }, [settle, view.round]);
+  const restoreFinal = useCallback(
+    (round: SlotRound) => settle(round, true),
+    [settle],
+  );
+  return {
+    view,
+    start,
+    skip,
+    canSkip,
+    continuePhase,
+    requesting,
+    reset,
+    setActiveParticles,
+    recover,
+    restoreFinal,
+  };
 }

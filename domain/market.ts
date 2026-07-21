@@ -19,18 +19,25 @@ export function totalPool(outcomes: Outcome[]): number {
 }
 
 /** Largest-remainder allocation guarantees that displayed probabilities total 100%. */
-export function probabilityBasisPoints(outcomes: Outcome[]): Record<string, number> {
+export function probabilityBasisPoints(
+  outcomes: Outcome[],
+): Record<string, number> {
   const total = totalPool(outcomes);
   if (total <= 0) {
-    return Object.fromEntries(outcomes.map((outcome) => [outcome.id, outcome.initialProbabilityBps]));
+    return Object.fromEntries(
+      outcomes.map((outcome) => [outcome.id, outcome.initialProbabilityBps]),
+    );
   }
 
   const raw = outcomes.map((outcome) => ({
     id: outcome.id,
     value: (outcome.pool * 10_000) / total,
   }));
-  const result = Object.fromEntries(raw.map(({ id, value }) => [id, Math.floor(value)]));
-  const remainder = 10_000 - Object.values(result).reduce((sum, value) => sum + value, 0);
+  const result = Object.fromEntries(
+    raw.map(({ id, value }) => [id, Math.floor(value)]),
+  );
+  const remainder =
+    10_000 - Object.values(result).reduce((sum, value) => sum + value, 0);
   const ranked = [...raw].sort((a, b) => (b.value % 1) - (a.value % 1));
 
   for (let index = 0; index < remainder; index += 1) {
@@ -52,8 +59,13 @@ export function marketView(event: MarketEvent): MarketOutcomeView[] {
 }
 
 /** Quote shows the coefficient this stake creates, not the pre-bet coefficient. */
-export function quoteBet(event: MarketEvent, outcomeId: string, amount: number): BetQuote {
-  if (!Number.isInteger(amount) || amount <= 0) throw new Error("INVALID_AMOUNT");
+export function quoteBet(
+  event: MarketEvent,
+  outcomeId: string,
+  amount: number,
+): BetQuote {
+  if (!Number.isInteger(amount) || amount <= 0)
+    throw new Error("INVALID_AMOUNT");
   const outcome = event.outcomes.find((item) => item.id === outcomeId);
   if (!outcome) throw new Error("OUTCOME_NOT_FOUND");
 
@@ -65,7 +77,9 @@ export function quoteBet(event: MarketEvent, outcomeId: string, amount: number):
     amount,
     coefficient,
     projectedPayout: Math.floor(amount * coefficient),
-    probabilityBps: Math.round((projectedOutcomePool / projectedTotalPool) * 10_000),
+    probabilityBps: Math.round(
+      (projectedOutcomePool / projectedTotalPool) * 10_000,
+    ),
     projectedTotalPool,
     projectedOutcomePool,
   };
@@ -88,16 +102,28 @@ export function allocateWinningPool(
   const shares = winningBets.map((bet) => {
     const exactPayout = (distributablePool * bet.amount) / winningUserPool;
     const payout = Math.floor(exactPayout);
-    return { betId: bet.id, exactPayout, payout, fraction: exactPayout - payout };
+    return {
+      betId: bet.id,
+      exactPayout,
+      payout,
+      fraction: exactPayout - payout,
+    };
   });
-  const remainder = distributablePool - shares.reduce((sum, share) => sum + share.payout, 0);
-  const ranked = [...shares].sort((a, b) => b.fraction - a.fraction || a.betId.localeCompare(b.betId));
-  for (let index = 0; index < remainder; index += 1) ranked[index % ranked.length].payout += 1;
+  const remainder =
+    distributablePool - shares.reduce((sum, share) => sum + share.payout, 0);
+  const ranked = [...shares].sort(
+    (a, b) => b.fraction - a.fraction || a.betId.localeCompare(b.betId),
+  );
+  for (let index = 0; index < remainder; index += 1)
+    ranked[index % ranked.length].payout += 1;
   return shares;
 }
 
 export function formatCoefficient(value: number): string {
-  return value.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return value.toLocaleString("ru-RU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function formatProbability(bps: number): string {

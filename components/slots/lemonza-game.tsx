@@ -3,88 +3,1207 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { SlotOperationalSettings, SlotRound } from "@/domain/models";
-import { LEMONZA_BONUS_BUY_COST_X, LEMONZA_GAME, LEMONZA_SYMBOLS } from "@/domain/slots/sweet-lemonza/config";
-import type { LemonzaCell, LemonzaPlay } from "@/domain/slots/sweet-lemonza/types";
+import {
+  LEMONZA_BONUS_BUY_COST_X,
+  LEMONZA_GAME,
+  LEMONZA_SYMBOLS,
+} from "@/domain/slots/sweet-lemonza/config";
+import type {
+  LemonzaCell,
+  LemonzaPlay,
+} from "@/domain/slots/sweet-lemonza/types";
 import { formatLira } from "@/domain/market";
 import { createClientRequestId } from "@/lib/client-id";
 import { LemonzaSymbolIcon } from "./lemonza-symbol";
 import { displayGrid } from "./sweet-lemonza/animation/display-grid";
 import { useRoundPlayback } from "./sweet-lemonza/animation/use-round-playback";
-import { LemonzaSoundManager, type SoundEvent } from "./sweet-lemonza/audio/sound-manager";
-import { AnimationStatus, BigWinOverlay, BonusIntro, BonusSpinCounter, BonusSummary, CascadeWinLabel, ScatterOverlay } from "./sweet-lemonza/components/animation-overlays";
+import {
+  LemonzaSoundManager,
+  type SoundEvent,
+} from "./sweet-lemonza/audio/sound-manager";
+import {
+  AnimationStatus,
+  BigWinOverlay,
+  BonusIntro,
+  BonusSpinCounter,
+  BonusSummary,
+  CascadeWinLabel,
+  ScatterOverlay,
+} from "./sweet-lemonza/components/animation-overlays";
 import { GameGrid } from "./sweet-lemonza/components/game-grid";
 import { useAccessibleDialog } from "./shared/use-accessible-dialog";
 import { PresentationErrorBoundary } from "./shared/presentation-error-boundary";
-import { clearRoundPresentation, loadRoundPresentation, saveRoundPresentation } from "./shared/round-presentation-snapshot";
+import {
+  clearRoundPresentation,
+  loadRoundPresentation,
+  saveRoundPresentation,
+} from "./shared/round-presentation-snapshot";
 
-interface LemonzaState { userId:string;settings:SlotOperationalSettings;balance:number;history:SlotRound[] }
-type LemonzaDevTest="win-bello"|"win-grande"|"win-magnifico"|"win-dolce-vita"|"bonus";
-const IS_DEVELOPMENT=process.env.NODE_ENV==="development";
-const LEMONZA_DEV_TESTS:{id:LemonzaDevTest;label:string}[]=[{id:"win-bello",label:"Большой выигрыш · 10X"},{id:"win-grande",label:"Большой выигрыш · 25X"},{id:"win-magnifico",label:"Большой выигрыш · 50X"},{id:"win-dolce-vita",label:"Большой выигрыш · 100X"},{id:"bonus",label:"Выпадение бонуса"}];
-const LEMONZA_DEV_WIN_X:Partial<Record<LemonzaDevTest,number>>={"win-bello":10,"win-grande":25,"win-magnifico":50,"win-dolce-vita":100};
-const previewSymbols:LemonzaCell["symbol"][]=["LEMON","RINGS","OLIVES","PROSECCO","GRAPES","LIMONCELLO","CAKE","OLIVES","WINE","LEMON","BOUQUET","GRAPES","GRAPES","PROSECCO","LEMON","RINGS","LEMON","OLIVES","BOUQUET","CAKE","LIMONCELLO","BOUQUET","WINE","GRAPES","OLIVES","SCATTER","LEMON","RINGS","PROSECCO","OLIVES"];
-const previewGrid=previewSymbols.map((symbol,index)=>({id:-(index+1),symbol}));
-const devBonusGrid=previewGrid.map((cell,index)=>[2,9,20,27].includes(index)?{id:-(900+index),symbol:"SCATTER" as const}:cell.symbol==="SCATTER"?{...cell,symbol:"LEMON" as const}:cell),devBonusScatterIds=new Set(devBonusGrid.filter((cell)=>cell.symbol==="SCATTER").map((cell)=>cell.id));
+interface LemonzaState {
+  userId: string;
+  settings: SlotOperationalSettings;
+  balance: number;
+  history: SlotRound[];
+}
+type LemonzaDevTest =
+  "win-bello" | "win-grande" | "win-magnifico" | "win-dolce-vita" | "bonus";
+const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
+const LEMONZA_DEV_TESTS: { id: LemonzaDevTest; label: string }[] = [
+  { id: "win-bello", label: "Большой выигрыш · 10X" },
+  { id: "win-grande", label: "Большой выигрыш · 25X" },
+  { id: "win-magnifico", label: "Большой выигрыш · 50X" },
+  { id: "win-dolce-vita", label: "Большой выигрыш · 100X" },
+  { id: "bonus", label: "Выпадение бонуса" },
+];
+const LEMONZA_DEV_WIN_X: Partial<Record<LemonzaDevTest, number>> = {
+  "win-bello": 10,
+  "win-grande": 25,
+  "win-magnifico": 50,
+  "win-dolce-vita": 100,
+};
+const previewSymbols: LemonzaCell["symbol"][] = [
+  "LEMON",
+  "RINGS",
+  "OLIVES",
+  "PROSECCO",
+  "GRAPES",
+  "LIMONCELLO",
+  "CAKE",
+  "OLIVES",
+  "WINE",
+  "LEMON",
+  "BOUQUET",
+  "GRAPES",
+  "GRAPES",
+  "PROSECCO",
+  "LEMON",
+  "RINGS",
+  "LEMON",
+  "OLIVES",
+  "BOUQUET",
+  "CAKE",
+  "LIMONCELLO",
+  "BOUQUET",
+  "WINE",
+  "GRAPES",
+  "OLIVES",
+  "SCATTER",
+  "LEMON",
+  "RINGS",
+  "PROSECCO",
+  "OLIVES",
+];
+const previewGrid = previewSymbols.map((symbol, index) => ({
+  id: -(index + 1),
+  symbol,
+}));
+const devBonusGrid = previewGrid.map((cell, index) =>
+    [2, 9, 20, 27].includes(index)
+      ? { id: -(900 + index), symbol: "SCATTER" as const }
+      : cell.symbol === "SCATTER"
+        ? { ...cell, symbol: "LEMON" as const }
+        : cell,
+  ),
+  devBonusScatterIds = new Set(
+    devBonusGrid
+      .filter((cell) => cell.symbol === "SCATTER")
+      .map((cell) => cell.id),
+  );
 
-function useReducedMotion(){const [reduced,setReduced]=useState(false);useEffect(()=>{const query=matchMedia("(prefers-reduced-motion: reduce)"),update=()=>setReduced(query.matches);update();query.addEventListener("change",update);return()=>query.removeEventListener("change",update);},[]);return reduced;}
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const query = matchMedia("(prefers-reduced-motion: reduce)"),
+      update = () => setReduced(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return reduced;
+}
 
-function LemonzaTopIcon({name,muted=false}:{name:"back"|"lab"|"sound"|"rules"|"history";muted?:boolean}){const common={fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round" as const,strokeLinejoin:"round" as const};return <svg className={`lemonza-top-icon lemonza-top-icon-${name}`} viewBox="0 0 24 24" aria-hidden="true">{name==="back"&&<path {...common} d="M19 12H6.5m0 0 5-5m-5 5 5 5"/>}{name==="lab"&&<><path {...common} d="M9 3h6m-5 0v5l-4.3 8.1A3.2 3.2 0 0 0 8.5 21h7a3.2 3.2 0 0 0 2.8-4.9L14 8V3"/><path className="lemonza-icon-accent" d="M7.8 15.5h8.4l1.5 2.7c.5.9-.2 2-1.2 2h-9c-1 0-1.7-1.1-1.2-2l1.5-2.7Z"/></>}{name==="sound"&&<><path {...common} d="M4 10v4h3l4 3V7l-4 3H4Z"/><path {...common} d="M14.5 9.1a4 4 0 0 1 0 5.8m2-8a7 7 0 0 1 0 10.2"/>{muted&&<path d="M4.2 4.2 19.8 19.8" stroke="#b85243" strokeWidth="2.4" strokeLinecap="round"/>}</>}{name==="rules"&&<><path {...common} d="M9.8 9.2a2.3 2.3 0 1 1 3.3 2.1c-.8.4-1.1.9-1.1 1.7"/><circle cx="12" cy="16.5" r="1.15" fill="currentColor"/></>}{name==="history"&&<><path {...common} d="M5.2 7.2A8 8 0 1 1 4 14M5.2 7.2V3.8m0 3.4H8.6"/><path {...common} d="M12 7.5V12l3 1.8"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></>}</svg>;}
+function LemonzaTopIcon({
+  name,
+  muted = false,
+}: {
+  name: "back" | "lab" | "sound" | "rules" | "history";
+  muted?: boolean;
+}) {
+  const common = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  return (
+    <svg
+      className={`lemonza-top-icon lemonza-top-icon-${name}`}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      {name === "back" && <path {...common} d="M19 12H6.5m0 0 5-5m-5 5 5 5" />}
+      {name === "lab" && (
+        <>
+          <path
+            {...common}
+            d="M9 3h6m-5 0v5l-4.3 8.1A3.2 3.2 0 0 0 8.5 21h7a3.2 3.2 0 0 0 2.8-4.9L14 8V3"
+          />
+          <path
+            className="lemonza-icon-accent"
+            d="M7.8 15.5h8.4l1.5 2.7c.5.9-.2 2-1.2 2h-9c-1 0-1.7-1.1-1.2-2l1.5-2.7Z"
+          />
+        </>
+      )}
+      {name === "sound" && (
+        <>
+          <path {...common} d="M4 10v4h3l4 3V7l-4 3H4Z" />
+          <path
+            {...common}
+            d="M14.5 9.1a4 4 0 0 1 0 5.8m2-8a7 7 0 0 1 0 10.2"
+          />
+          {muted && (
+            <path
+              d="M4.2 4.2 19.8 19.8"
+              stroke="#b85243"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+          )}
+        </>
+      )}
+      {name === "rules" && (
+        <>
+          <path
+            {...common}
+            d="M9.8 9.2a2.3 2.3 0 1 1 3.3 2.1c-.8.4-1.1.9-1.1 1.7"
+          />
+          <circle cx="12" cy="16.5" r="1.15" fill="currentColor" />
+        </>
+      )}
+      {name === "history" && (
+        <>
+          <path {...common} d="M5.2 7.2A8 8 0 1 1 4 14M5.2 7.2V3.8m0 3.4H8.6" />
+          <path {...common} d="M12 7.5V12l3 1.8" />
+          <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+        </>
+      )}
+    </svg>
+  );
+}
 
-function LemonzaDevMenu({disabled,onSelect}:{disabled:boolean;onSelect:(test:LemonzaDevTest)=>void}){const details=useRef<HTMLDetailsElement>(null);if(!IS_DEVELOPMENT)return null;return <details ref={details} className="group relative"><summary className="lemonza-round-button cursor-pointer list-none [&::-webkit-details-marker]:hidden" aria-label="Открыть тестовые сценарии" title="Тестовые сценарии"><LemonzaTopIcon name="lab"/></summary><div className="lemonza-dev-menu absolute left-1/2 top-[calc(100%+.45rem)] z-[90] w-64 -translate-x-1/2 overflow-hidden rounded-2xl border border-[#d8ad47]/55 bg-[#fffaf0]/98 text-[#17231e] shadow-2xl backdrop-blur-md"><div className="border-b border-[#d8ad47]/25 bg-[#174b38] px-3 py-2"><strong className="block text-[.65rem] font-black uppercase tracking-[.14em] text-[#f4d65c]">Тесты анимации</strong><small className="text-[.55rem] font-bold text-white/70">Только режим разработки</small></div><div className="grid gap-1 p-2">{LEMONZA_DEV_TESTS.map((test,index)=><button type="button" key={test.id} disabled={disabled} className="flex items-center gap-2 rounded-xl border border-transparent px-2.5 py-2 text-left text-xs font-black text-[#17231e] hover:border-[#d8ad47]/25 hover:bg-[#f2cf55]/20 disabled:opacity-40" onClick={()=>{details.current?.removeAttribute("open");onSelect(test.id);}}><i className="grid size-5 flex-none place-items-center rounded-full bg-[#f2cf55] text-[.55rem] not-italic text-[#174b38]">{index+1}</i><span>{test.label}</span></button>)}</div></div></details>;}
-
-function LemonzaRules({onClose,stake}:{onClose:()=>void;stake:number}){const prize=(payoutHundredths:number)=>formatLira(Math.floor(stake*payoutHundredths/100));return <Modal title="Come si gioca" eyebrow="Правила Sweet Lemonza" variant="slot" onClose={onClose}><div className="lemonza-rules"><div className="lemonza-rules-hero"><span>🍋</span><div><strong>Собирайте 8+ символов</strong><small>В любом месте сетки 6X5 — соседство не требуется</small></div></div><div className="lemonza-rule-grid"><article><b>Cascata</b><p>Выигравшие символы исчезают, остальные падают. Новые каскады продолжаются до сетки без выигрышей.</p></article><article><b>AMORE</b><p>4 Scatter дают 3X и 10 FS, 5 дают 5X и 10 FS, 6+ дают 100X и 10 FS.</p></article><article><b>Moltiplicatore</b><p>Во фриспинах множители складываются и применяются к выигрышу текущего Spin.</p></article><article><b>Retrigger</b><p>3+ AMORE во фриспинах добавляют 5 вращений. Технический предел — 100 FS.</p></article></div><section className="lemonza-paytable"><div className="lemonza-paytable-title"><span>Tabella dei premi</span><small>Выигрыш при ставке <b>{formatLira(stake)}</b></small></div><div className="lemonza-paytable-grid">{LEMONZA_SYMBOLS.map((symbol,index)=><article className="lemonza-pay-symbol" key={symbol.id}><div className="lemonza-pay-symbol-info"><LemonzaSymbolIcon cell={{id:-5000-index,symbol:symbol.id}} className="lemonza-pay-symbol-icon"/><strong>{symbol.title}</strong></div><div><span><b>12+</b><em>{prize(symbol.payouts[2])}</em></span><span><b>10–11</b><em>{prize(symbol.payouts[1])}</em></span><span><b>8–9</b><em>{prize(symbol.payouts[0])}</em></span></div></article>)}</div><article className="lemonza-scatter-prize"><LemonzaSymbolIcon cell={{id:-5999,symbol:"SCATTER"}} className="lemonza-scatter-prize-icon"/><div><strong>Scatter AMORE</strong><small>Даёт выплату и запускает 10 бесплатных Spin</small></div><div className="lemonza-scatter-prize-values"><span><b>6+</b><em>{formatLira(stake*100)}</em></span><span><b>5</b><em>{formatLira(stake*5)}</em></span><span><b>4</b><em>{formatLira(stake*3)}</em></span></div></article></section><div className="lemonza-rule-notes"><p><b>Lemon Boost</b> стоит +25% и примерно удваивает вероятность Scatter.</p><p><b>Festa Bonus</b> стоит {LEMONZA_BONUS_BUY_COST_X}X ставки и запускает гарантированный бонусный trigger-spin.</p><p>Только виртуальные свадебные лиры.</p></div></div></Modal>}
-
-function LemonzaHistoryPlay({play,label}:{play:LemonzaPlay;label:string}){return <details className="lemonza-history-play"><summary><span>{label}</span><b>{formatLira(play.totalPayout)}</b></summary><div className="lemonza-history-play-stats"><span>Каскады <b>{play.cascades.length}</b></span><span>Scatter <b>{play.scatterCount} · {formatLira(play.scatterPayout)}</b></span><span>Множители <b>{play.collectedMultipliers.length?play.collectedMultipliers.map((value)=>`${value}X`).join(" + "):"—"}</b></span><span>Итоговый X <b>{play.appliedMultiplier}X</b></span></div><div className="lemonza-history-mini-grid">{play.finalGrid.map((cell)=><i key={cell.id}><LemonzaSymbolIcon cell={cell}/></i>)}</div>{play.cascades.length>0&&<ol className="lemonza-history-cascades">{play.cascades.map((cascade,index)=><li key={index}><span>Каскад {index+1} · удалено {cascade.removedIndices.length}</span><b>{formatLira(cascade.payout)}</b></li>)}</ol>}</details>}
-function LemonzaHistory({rounds,onClose}:{rounds:SlotRound[];onClose:()=>void}){const [selected,setSelected]=useState<SlotRound>();return <Modal title="Ultimi Spin" eyebrow="История игры" variant="slot" onClose={onClose}>{selected?<div className="lemonza-history-detail"><button className="lemonza-history-back" onClick={()=>setSelected(undefined)}>← Ко всем Spin</button><RoundSummary round={selected}/><section className="lemonza-history-totals"><span>Scatter payout <b>{formatLira(selected.scatterWin)}</b></span><span>Base total <b>{formatLira(selected.baseWin)}</b></span><span>Bonus total <b>{formatLira(selected.bonusWin)}</b></span><span>Round total <b>{formatLira(selected.totalWin)}</b></span></section>{selected.result.base&&<LemonzaHistoryPlay play={selected.result.base} label="Base Spin"/>}{selected.result.freeSpins.map((play,index)=><LemonzaHistoryPlay key={index} play={play} label={`Free Spin ${index+1}`}/>) }<p className="lemonza-history-version">Round ID: {selected.id}<br/>Math version: {selected.mathVersion||selected.result.mathVersion||"legacy"}</p></div>:<div className="lemonza-history-list">{rounds.length?rounds.map((round)=><button key={round.id} onClick={()=>setSelected(round)}><span>₤</span><div><strong>Ставка {formatLira(round.chargedAmount)}</strong><small>{new Date(round.createdAt).toLocaleString("ru-RU")}</small></div><b className={round.totalWin>0?"is-win":""}>{round.totalWin>0?`+${formatLira(round.totalWin)}`:"0"}</b></button>):<p className="py-8 text-center text-[#7d847e]">История пока пуста.</p>}</div>}</Modal>}
-
-function Modal({title,eyebrow,onClose,children,variant="default"}:{title:string;eyebrow?:string;onClose:()=>void;children:React.ReactNode;variant?:"default"|"slot"|"flush"}){const dialogRef=useRef<HTMLElement>(null),titleId=useId();useAccessibleDialog(dialogRef,onClose);return <div className="lemonza-modal-backdrop" onMouseDown={(event)=>{if(event.currentTarget===event.target)onClose();}}><section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} className={`lemonza-modal lemonza-modal-${variant}`}>{variant!=="flush"&&<header className="lemonza-modal-header"><div>{eyebrow&&<small>{eyebrow}</small>}<h2 id={titleId}>{title}</h2></div><button aria-label="Закрыть" onClick={onClose}>×</button></header>}{variant==="flush"&&<><h2 id={titleId} className="sr-only">{title||"Покупка Festa Bonus"}</h2><button className="lemonza-modal-floating-close" aria-label="Закрыть" onClick={onClose}>×</button></>}<div className="lemonza-modal-scroll">{children}</div></section></div>}
-function RoundSummary({round}:{round:SlotRound}){return <div className="grid grid-cols-2 gap-2 text-sm"><div className="rounded-xl bg-[#174b38]/6 p-3"><small>Стоимость · {round.mode}</small><strong className="block">{formatLira(round.chargedAmount)}</strong></div><div className="rounded-xl bg-[#f2cf55]/16 p-3"><small>Общий выигрыш</small><strong className="block">{formatLira(round.totalWin)}</strong></div><div className="rounded-xl bg-[#174b38]/6 p-3"><small>Обычная игра</small><strong className="block">{formatLira(round.baseWin+round.scatterWin)}</strong></div><div className="rounded-xl bg-[#174b38]/6 p-3"><small>Бонус</small><strong className="block">{formatLira(round.bonusWin)} · max {round.maxMultiplier}X</strong></div><p className="col-span-2 break-all text-[.65rem] text-[#858a84]">Round ID: {round.id} · math: {round.mathVersion}</p></div>}
-function BonusBuyOffer({stake,onClose,onConfirm}:{stake:number;onClose:()=>void;onConfirm:()=>void}){const price=stake*LEMONZA_BONUS_BUY_COST_X;return <div className="lemonza-bonus-offer"><div className="lemonza-bonus-offer-hero"><span className="lemonza-offer-lemon">🍋</span><p>Edizione matrimonio</p><strong>10 GIRI GRATIS</strong><small>Гарантированная встреча с AMORE</small><div className="lemonza-offer-scatters" aria-hidden="true"><i>♥</i><i>♥</i><i>♥</i><i>♥</i></div></div><div className="lemonza-offer-price"><span>Стоимость бонуса</span><strong>{formatLira(price)}</strong><small>{LEMONZA_BONUS_BUY_COST_X}X базовой ставки · только свадебные лиры</small></div><div className="lemonza-offer-perks"><span><b>AMORE</b><small>Бонусный trigger-spin</small></span><span><b>10 FS</b><small>Стартовый пакет</small></span><span><b>до 100</b><small>С учётом retrigger</small></span></div><p className="lemonza-offer-warning">Покупка запускается сразу и не отменяется после подтверждения.</p><div className="lemonza-bonus-buy-actions"><button className="lemonza-offer-cancel" onClick={onClose}>Не сейчас</button><button className="lemonza-offer-confirm" onClick={onConfirm}><span>Начать бонус</span><strong>{formatLira(price)}</strong></button></div></div>}
-
-export function SweetLemonzaGame({initialState}:{initialState:LemonzaState}){
-  const [balance,setBalance]=useState(initialState.balance),[history,setHistory]=useState(initialState.history),[stake,setStake]=useState(initialState.settings.allowedBets[0]);
-  const [muted,setMuted]=useState(false),[turbo,setTurbo]=useState(false),[lemonBoost,setLemonBoost]=useState(false),[rulesOpen,setRulesOpen]=useState(false),[historyOpen,setHistoryOpen]=useState(false),[bonusBuyOpen,setBonusBuyOpen]=useState(false),[error,setError]=useState(""),[devTest,setDevTest]=useState<LemonzaDevTest|null>(null),[devBonusIntro,setDevBonusIntro]=useState(false),[recoverableRound,setRecoverableRound]=useState<SlotRound>();
-  const allowedBets=initialState.settings.allowedBets,reducedMotion=useReducedMotion(),pendingRequest=useRef<{stake:number;mode:"STANDARD"|"LEMON_BOOST"|"BONUS_BUY";idempotencyKey:string}|undefined>(undefined),recoveringRoundId=useRef<string|undefined>(undefined),[soundManager]=useState(()=>new LemonzaSoundManager());
-  useEffect(()=>{soundManager.setMuted(muted);},[muted,soundManager]);useEffect(()=>()=>soundManager.dispose(),[soundManager]);
-  useEffect(()=>{const saved=Number(localStorage.getItem("lemonza-stake"));if(allowedBets.includes(saved))requestAnimationFrame(()=>setStake(saved));},[allowedBets]);
-  useEffect(()=>{window.dispatchEvent(new CustomEvent("wedbet:balance",{detail:balance}));},[balance]);
-  const playSound=useCallback((event:SoundEvent,pitch?:number)=>soundManager.play(event,pitch),[soundManager]);
-  const completeRound=useCallback((round:SlotRound)=>{const recovered=recoveringRoundId.current===round.id;recoveringRoundId.current=undefined;if(!recovered)setBalance(round.balanceAfter);setHistory((items)=>[round,...items.filter((item)=>item.id!==round.id)].slice(0,20));pendingRequest.current=undefined;clearRoundPresentation(localStorage,round.gameId,initialState.userId);},[initialState.userId]);
-  const playback=useRoundPlayback({turbo,reducedMotion,onSound:playSound,onComplete:completeRound});
-  const {view}=playback,busy=!(["idle","round-complete"] as string[]).includes(view.state),requesting=view.state==="requesting-spin";
-  const interactionLocked=busy||devTest!==null||Boolean(recoverableRound);
-  const runDevTest=useCallback((test:LemonzaDevTest)=>{if(!IS_DEVELOPMENT||busy||devTest!==null||recoverableRound)return;setBonusBuyOpen(false);setError("");setDevBonusIntro(false);setDevTest(test);playSound(test==="bonus"?"symbols-drop":"big-win");},[busy,devTest,playSound,recoverableRound]);
-  useEffect(()=>{let active=true;const round=loadRoundPresentation<SlotRound>(localStorage,{gameId:"sweet-lemonza",userId:initialState.userId,availableRoundIds:new Set(initialState.history.map((item)=>item.id))});if(round)queueMicrotask(()=>{if(active)setRecoverableRound(round);});return()=>{active=false;};},[initialState.history,initialState.userId]);
-  useEffect(()=>{if(!IS_DEVELOPMENT||devTest!=="bonus")return;const timer=window.setTimeout(()=>{playSound("bonus-trigger");setDevBonusIntro(true);},reducedMotion?80:1100);return()=>window.clearTimeout(timer);},[devTest,playSound,reducedMotion]);
-  useEffect(()=>{if(process.env.NODE_ENV!=="development")return;(window as typeof window&{__LEMONZA_DEBUG__?:unknown}).__LEMONZA_DEBUG__={animationState:view.state,activeAnimations:busy?1:0,activeParticles:view.activeParticles,currentCascade:view.cascadeIndex,turboMode:turbo,lastFrameDuration:0};},[view.state,view.activeParticles,view.cascadeIndex,busy,turbo]);
-  async function spin(retry=false,requestedMode?:"STANDARD"|"LEMON_BOOST"|"BONUS_BUY"){
-    if(devTest!==null){setError("Завершите тест анимации перед настоящим Spin.");return;}if(recoverableRound){setError("Сначала завершите показ сохранённого раунда.");return;}if(busy){if(playback.canSkip)playback.skip();return;}if(!navigator.onLine){setError("Spin требует соединения с сервером. Offline-вращения отключены.");return;}if(!initialState.settings.enabled||!initialState.settings.spinsEnabled){setError("Игра временно закрыта крупье.");return;}
-    const mode=requestedMode??(lemonBoost?"LEMON_BOOST":"STANDARD"),price=mode==="BONUS_BUY"?stake*LEMONZA_BONUS_BUY_COST_X:mode==="LEMON_BOOST"?stake*1.25:stake;if(balance<price){setError("Недостаточно свадебных лир для этой ставки.");return;}
-    await soundManager.unlock();playSound("spin-press");setError("");playback.requesting();const request=retry&&pendingRequest.current?pendingRequest.current:{stake,mode,idempotencyKey:createClientRequestId()};pendingRequest.current=request;
-    try{const response=await fetch("/api/slots/sweet-lemonza/spin",{method:"POST",cache:"no-store",headers:{"content-type":"application/json"},body:JSON.stringify({gameId:LEMONZA_GAME.id,...request})});const body=await response.json();if(!response.ok)throw new Error(body.error);const round=body.round as SlotRound;saveRoundPresentation(localStorage,round);setBalance(round.balanceBefore-round.chargedAmount);await playback.start(round,gridSymbols);}catch(reason){setError(reason instanceof Error?reason.message:"Не удалось выполнить Spin");playback.reset();}
-  }
-  function changeStake(direction:number){const index=Math.max(0,allowedBets.indexOf(stake)),next=allowedBets[Math.max(0,Math.min(allowedBets.length-1,index+direction))];setStake(next);localStorage.setItem("lemonza-stake",String(next));}
-  const devBonusActive=IS_DEVELOPMENT&&devTest==="bonus",gridSymbols=devBonusActive?displayGrid(devBonusGrid,devBonusScatterIds):view.symbols.length?view.symbols:displayGrid(previewGrid,new Set()),gridState=devBonusActive?"initial-drop":view.state,bonusWin=view.round?.bonusWin??0,spinCost=lemonBoost?stake*1.25:stake,multiplierActive=["revealing-multipliers","collecting-multiplier","applying-multipliers"].includes(view.state),devWinX=devTest?LEMONZA_DEV_WIN_X[devTest]:undefined;
-  return <div className={`lemonza-screen ${view.bonusMode?"is-bonus-mode":""} ${requesting?"is-requesting":""} ${busy?"is-playing":""} ${turbo?"is-turbo":""} ${view.fastForwardSpin?"is-skip-speed":""} ${reducedMotion?"is-reduced-motion":""}`}>
-    <div className="lemonza-background"/><div className="lemonza-water"/><div className="lemonza-leaves"/><div className="lemonza-beach-scene" aria-hidden="true"><span className="lemonza-umbrella lemonza-umbrella-left"><i/></span><span className="lemonza-lounger"/><span className="lemonza-umbrella lemonza-umbrella-right"><i/></span><span className="lemonza-beach-ball"/><span className="lemonza-towel"/></div>
-    <header className="relative z-40 flex items-center justify-between gap-2 px-3 pb-2 pt-[max(.65rem,env(safe-area-inset-top))]"><Link href="/slots" aria-label="Назад к слотам" className="lemonza-round-button"><LemonzaTopIcon name="back"/></Link><div className="rounded-full bg-[#174b38]/90 px-3 py-2 text-sm font-black text-white shadow"><span className="mr-1 text-[#f2cf55]">₤</span>{balance.toLocaleString("ru-RU")}</div><div className="flex gap-1.5"><LemonzaDevMenu disabled={interactionLocked} onSelect={runDevTest}/><button className="lemonza-round-button" aria-label={muted?"Включить звук":"Выключить звук"} onClick={()=>setMuted((value)=>!value)}><LemonzaTopIcon name="sound" muted={muted}/></button><button className="lemonza-round-button" aria-label="Правила" onClick={()=>setRulesOpen(true)}><LemonzaTopIcon name="rules"/></button><button className="lemonza-round-button" aria-label="История" onClick={()=>setHistoryOpen(true)}><LemonzaTopIcon name="history"/></button></div></header>
-    <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-2"><div className="mb-1 text-center"><h1 className="serif rotate-[-2deg] text-3xl font-black leading-none text-white [text-shadow:0_2px_0_#246149,0_4px_10px_rgba(0,0,0,.25)]">Sweet <span className="text-[#f5d84d]">Lemonza</span></h1><p className="mt-1 text-[.55rem] font-black uppercase tracking-[.28em] text-[#174b38]">La Dolce Vita Spins {view.bonusMode&&<b className="ml-2 rounded-full bg-[#f5d84d] px-2 py-0.5">BONUS</b>}</p></div>
-      {view.bonusMode&&view.freeSpinNumber>0&&<div className="lemonza-bonus-counters"><div className="lemonza-free-counter">БОНУС {view.freeSpinNumber}/{view.freeSpinTotal}</div><BonusSpinCounter win={view.spinWin} baseWin={view.multiplierWin} multiplier={view.multiplierTotal} multiplierActive={multiplierActive}/></div>}
-      <div className="relative w-full max-w-[31rem] rounded-[1.25rem] border-[6px] border-[#fff4d6] bg-[#286f95] p-1.5 shadow-[0_12px_35px_rgba(15,58,54,.35),inset_0_0_0_3px_#d8a944]"><PresentationErrorBoundary resetKey={`${view.round?.id??"preview"}-${gridState}`} onRecover={playback.recover}><GameGrid symbols={gridSymbols} state={gridState} cascadeIndex={view.cascadeIndex} reducedMotion={reducedMotion} shake={view.shake} onParticleCount={playback.setActiveParticles}/></PresentationErrorBoundary><CascadeWinLabel value={view.cascadeWin} visible={view.state==="showing-win-value"||view.state==="removing-symbols"}/><ScatterOverlay count={devBonusActive&&!devBonusIntro?4:view.state==="showing-scatter-result"?view.scatterCount:0} isFreeSpin={view.isFreeSpin}/></div>
-      <div className="mt-2 min-h-10 text-center" aria-live="assertive">{view.displayWin>0&&<strong className="text-xl font-black tracking-[-.02em] text-[#173f33] tabular-nums">ВЫИГРЫШ · {formatLira(view.displayWin)}</strong>}{view.recoveryNotice&&<p className="slot-recovery-notice">{view.recoveryNotice}</p>}{recoverableRound&&<div className="slot-resume-card"><span>Есть завершённый раунд, показ которого прервался.</span><div><button onClick={()=>{const round=recoverableRound;recoveringRoundId.current=round.id;setRecoverableRound(undefined);setError("");void playback.start(round,gridSymbols);}}>Продолжить показ раунда</button><button onClick={()=>{const round=recoverableRound;recoveringRoundId.current=round.id;setRecoverableRound(undefined);setError("");playback.restoreFinal(round);}}>Показать результат</button></div></div>}{error&&<p className="rounded-lg bg-[#a84735] px-3 py-2 text-xs font-bold text-white">{error}</p>}</div>
-    </main>
-    <footer className="lemonza-control-deck relative z-40 px-2 pb-[max(.4rem,env(safe-area-inset-bottom))] pt-1.5">
-      <div className="lemonza-control-grid mx-auto max-w-[32rem]">
-        <div className="lemonza-stake-control">
-          <button aria-label="Уменьшить ставку" disabled={interactionLocked||allowedBets.indexOf(stake)===0} onClick={()=>changeStake(-1)}>−</button>
-          <div><small>Ставка</small><strong>{formatLira(stake)}</strong></div>
-          <button aria-label="Увеличить ставку" disabled={interactionLocked||allowedBets.indexOf(stake)===allowedBets.length-1} onClick={()=>changeStake(1)}>+</button>
+function LemonzaDevMenu({
+  disabled,
+  onSelect,
+}: {
+  disabled: boolean;
+  onSelect: (test: LemonzaDevTest) => void;
+}) {
+  const details = useRef<HTMLDetailsElement>(null);
+  if (!IS_DEVELOPMENT) return null;
+  return (
+    <details ref={details} className="group relative">
+      <summary
+        className="lemonza-round-button cursor-pointer list-none [&::-webkit-details-marker]:hidden"
+        aria-label="Открыть тестовые сценарии"
+        title="Тестовые сценарии"
+      >
+        <LemonzaTopIcon name="lab" />
+      </summary>
+      <div className="lemonza-dev-menu absolute left-1/2 top-[calc(100%+.45rem)] z-[90] w-64 -translate-x-1/2 overflow-hidden rounded-2xl border border-[#d8ad47]/55 bg-[#fffaf0]/98 text-[#17231e] shadow-2xl backdrop-blur-md">
+        <div className="border-b border-[#d8ad47]/25 bg-[#174b38] px-3 py-2">
+          <strong className="block text-[.65rem] font-black uppercase tracking-[.14em] text-[#f4d65c]">
+            Тесты анимации
+          </strong>
+          <small className="text-[.55rem] font-bold text-white/70">
+            Только режим разработки
+          </small>
         </div>
-        <div className="lemonza-spin-cluster"><span className="lemonza-spin-mode lemonza-spin-mode-left"><button title="Turbo: скорость анимаций" aria-label="Переключить Turbo" aria-pressed={turbo} disabled={interactionLocked} onClick={()=>setTurbo((value)=>!value)} className={turbo?"is-active":""}><span aria-hidden="true">⚡</span></button><small>Turbo</small></span><button aria-label={requesting?"Spin выполняется":playback.canSkip?"Ускорить падение текущего Spin":busy?"Spin завершается":"Spin"} onClick={()=>void spin(Boolean(error))} disabled={devTest!==null||Boolean(recoverableRound)||requesting||(busy&&!playback.canSkip)} className={`lemonza-spin-button ${requesting?"is-loading":""} ${busy?"is-busy":""}`}><span>{playback.canSkip?"SKIP":"SPIN"}</span><small className={playback.canSkip?undefined:"lemonza-spin-cost"}>{playback.canSkip?"ускорить":formatLira(spinCost)}</small></button><span className="lemonza-spin-mode lemonza-spin-mode-right"><button title="Lemon Boost: стоимость +25%" aria-label="Переключить Lemon Boost" disabled={interactionLocked||!initialState.settings.lemonBoostEnabled} aria-pressed={lemonBoost} onClick={()=>setLemonBoost((value)=>!value)} className={lemonBoost?"is-active":""}><LemonzaSymbolIcon cell={{id:-7101,symbol:"SCATTER"}} className="lemonza-quick-amore"/><i>+25</i></button><small>Boost</small></span></div>
-        <button title={`Купить 10 фриспинов за ${formatLira(stake*LEMONZA_BONUS_BUY_COST_X)}`} aria-label={`Купить 10 фриспинов за ${formatLira(stake*LEMONZA_BONUS_BUY_COST_X)}`} disabled={interactionLocked||!initialState.settings.bonusBuyEnabled} onClick={()=>setBonusBuyOpen(true)} className="lemonza-buy-control"><span className="lemonza-buy-medallion"><LemonzaSymbolIcon cell={{id:-7102,symbol:"SCATTER"}} className="lemonza-buy-amore"/></span><span className="lemonza-buy-copy"><b>10 фриспинов</b></span><strong>{formatLira(stake*LEMONZA_BONUS_BUY_COST_X)}</strong></button>
+        <div className="grid gap-1 p-2">
+          {LEMONZA_DEV_TESTS.map((test, index) => (
+            <button
+              type="button"
+              key={test.id}
+              disabled={disabled}
+              className="flex items-center gap-2 rounded-xl border border-transparent px-2.5 py-2 text-left text-xs font-black text-[#17231e] hover:border-[#d8ad47]/25 hover:bg-[#f2cf55]/20 disabled:opacity-40"
+              onClick={() => {
+                details.current?.removeAttribute("open");
+                onSelect(test.id);
+              }}
+            >
+              <i className="grid size-5 flex-none place-items-center rounded-full bg-[#f2cf55] text-[.55rem] not-italic text-[#174b38]">
+                {index + 1}
+              </i>
+              <span>{test.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
-    </footer>
-    {view.state==="entering-bonus"&&<BonusIntro total={view.freeSpinTotal} onContinue={playback.continuePhase}/>} {view.state==="showing-big-win"&&view.celebrationWin>0&&view.round&&<BigWinOverlay win={view.celebrationWin} stake={view.round.stake} onContinue={playback.continuePhase}/>} {view.state==="bonus-summary"&&view.round&&<BonusSummary freeSpins={view.round.result.totalFreeSpinsPlayed} win={bonusWin} onContinue={playback.continuePhase}/>} {IS_DEVELOPMENT&&devWinX&&<BigWinOverlay win={stake*devWinX} stake={stake} onContinue={()=>setDevTest(null)}/>} {IS_DEVELOPMENT&&devBonusActive&&devBonusIntro&&<BonusIntro total={10} onContinue={()=>{setDevBonusIntro(false);setDevTest(null);}}/>}<AnimationStatus state={view.state}/>
-    {rulesOpen&&<LemonzaRules onClose={()=>setRulesOpen(false)} stake={stake}/>} {historyOpen&&<LemonzaHistory rounds={history} onClose={()=>setHistoryOpen(false)}/>} {bonusBuyOpen&&<Modal title="" variant="flush" onClose={()=>setBonusBuyOpen(false)}><BonusBuyOffer stake={stake} onClose={()=>setBonusBuyOpen(false)} onConfirm={()=>{setBonusBuyOpen(false);void spin(false,"BONUS_BUY");}}/></Modal>}
-  </div>;
+    </details>
+  );
+}
+
+function LemonzaRules({
+  onClose,
+  stake,
+}: {
+  onClose: () => void;
+  stake: number;
+}) {
+  const prize = (payoutHundredths: number) =>
+    formatLira(Math.floor((stake * payoutHundredths) / 100));
+  return (
+    <Modal
+      title="Come si gioca"
+      eyebrow="Правила Sweet Lemonza"
+      variant="slot"
+      onClose={onClose}
+    >
+      <div className="lemonza-rules">
+        <div className="lemonza-rules-hero">
+          <span>🍋</span>
+          <div>
+            <strong>Собирайте 8+ символов</strong>
+            <small>В любом месте сетки 6X5 — соседство не требуется</small>
+          </div>
+        </div>
+        <div className="lemonza-rule-grid">
+          <article>
+            <b>Cascata</b>
+            <p>
+              Выигравшие символы исчезают, остальные падают. Новые каскады
+              продолжаются до сетки без выигрышей.
+            </p>
+          </article>
+          <article>
+            <b>AMORE</b>
+            <p>
+              4 Scatter дают 3X и 10 FS, 5 дают 5X и 10 FS, 6+ дают 100X и 10
+              FS.
+            </p>
+          </article>
+          <article>
+            <b>Moltiplicatore</b>
+            <p>
+              Во фриспинах множители складываются и применяются к выигрышу
+              текущего Spin.
+            </p>
+          </article>
+          <article>
+            <b>Retrigger</b>
+            <p>
+              3+ AMORE во фриспинах добавляют 5 вращений. Технический предел —
+              100 FS.
+            </p>
+          </article>
+        </div>
+        <section className="lemonza-paytable">
+          <div className="lemonza-paytable-title">
+            <span>Tabella dei premi</span>
+            <small>
+              Выигрыш при ставке <b>{formatLira(stake)}</b>
+            </small>
+          </div>
+          <div className="lemonza-paytable-grid">
+            {LEMONZA_SYMBOLS.map((symbol, index) => (
+              <article className="lemonza-pay-symbol" key={symbol.id}>
+                <div className="lemonza-pay-symbol-info">
+                  <LemonzaSymbolIcon
+                    cell={{ id: -5000 - index, symbol: symbol.id }}
+                    className="lemonza-pay-symbol-icon"
+                  />
+                  <strong>{symbol.title}</strong>
+                </div>
+                <div>
+                  <span>
+                    <b>12+</b>
+                    <em>{prize(symbol.payouts[2])}</em>
+                  </span>
+                  <span>
+                    <b>10–11</b>
+                    <em>{prize(symbol.payouts[1])}</em>
+                  </span>
+                  <span>
+                    <b>8–9</b>
+                    <em>{prize(symbol.payouts[0])}</em>
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+          <article className="lemonza-scatter-prize">
+            <LemonzaSymbolIcon
+              cell={{ id: -5999, symbol: "SCATTER" }}
+              className="lemonza-scatter-prize-icon"
+            />
+            <div>
+              <strong>Scatter AMORE</strong>
+              <small>Даёт выплату и запускает 10 бесплатных Spin</small>
+            </div>
+            <div className="lemonza-scatter-prize-values">
+              <span>
+                <b>6+</b>
+                <em>{formatLira(stake * 100)}</em>
+              </span>
+              <span>
+                <b>5</b>
+                <em>{formatLira(stake * 5)}</em>
+              </span>
+              <span>
+                <b>4</b>
+                <em>{formatLira(stake * 3)}</em>
+              </span>
+            </div>
+          </article>
+        </section>
+        <div className="lemonza-rule-notes">
+          <p>
+            <b>Lemon Boost</b> стоит +25% и примерно удваивает вероятность
+            Scatter.
+          </p>
+          <p>
+            <b>Festa Bonus</b> стоит {LEMONZA_BONUS_BUY_COST_X}X ставки и
+            запускает гарантированный бонусный trigger-spin.
+          </p>
+          <p>Только виртуальные свадебные лиры.</p>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function LemonzaHistoryPlay({
+  play,
+  label,
+}: {
+  play: LemonzaPlay;
+  label: string;
+}) {
+  return (
+    <details className="lemonza-history-play">
+      <summary>
+        <span>{label}</span>
+        <b>{formatLira(play.totalPayout)}</b>
+      </summary>
+      <div className="lemonza-history-play-stats">
+        <span>
+          Каскады <b>{play.cascades.length}</b>
+        </span>
+        <span>
+          Scatter{" "}
+          <b>
+            {play.scatterCount} · {formatLira(play.scatterPayout)}
+          </b>
+        </span>
+        <span>
+          Множители{" "}
+          <b>
+            {play.collectedMultipliers.length
+              ? play.collectedMultipliers
+                  .map((value) => `${value}X`)
+                  .join(" + ")
+              : "—"}
+          </b>
+        </span>
+        <span>
+          Итоговый X <b>{play.appliedMultiplier}X</b>
+        </span>
+      </div>
+      <div className="lemonza-history-mini-grid">
+        {play.finalGrid.map((cell) => (
+          <i key={cell.id}>
+            <LemonzaSymbolIcon cell={cell} />
+          </i>
+        ))}
+      </div>
+      {play.cascades.length > 0 && (
+        <ol className="lemonza-history-cascades">
+          {play.cascades.map((cascade, index) => (
+            <li key={index}>
+              <span>
+                Каскад {index + 1} · удалено {cascade.removedIndices.length}
+              </span>
+              <b>{formatLira(cascade.payout)}</b>
+            </li>
+          ))}
+        </ol>
+      )}
+    </details>
+  );
+}
+function LemonzaHistory({
+  rounds,
+  onClose,
+}: {
+  rounds: SlotRound[];
+  onClose: () => void;
+}) {
+  const [selected, setSelected] = useState<SlotRound>();
+  return (
+    <Modal
+      title="Ultimi Spin"
+      eyebrow="История игры"
+      variant="slot"
+      onClose={onClose}
+    >
+      {selected ? (
+        <div className="lemonza-history-detail">
+          <button
+            className="lemonza-history-back"
+            onClick={() => setSelected(undefined)}
+          >
+            ← Ко всем Spin
+          </button>
+          <RoundSummary round={selected} />
+          <section className="lemonza-history-totals">
+            <span>
+              Scatter payout <b>{formatLira(selected.scatterWin)}</b>
+            </span>
+            <span>
+              Base total <b>{formatLira(selected.baseWin)}</b>
+            </span>
+            <span>
+              Bonus total <b>{formatLira(selected.bonusWin)}</b>
+            </span>
+            <span>
+              Round total <b>{formatLira(selected.totalWin)}</b>
+            </span>
+          </section>
+          {selected.result.base && (
+            <LemonzaHistoryPlay play={selected.result.base} label="Base Spin" />
+          )}
+          {selected.result.freeSpins.map((play, index) => (
+            <LemonzaHistoryPlay
+              key={index}
+              play={play}
+              label={`Free Spin ${index + 1}`}
+            />
+          ))}
+          <p className="lemonza-history-version">
+            Round ID: {selected.id}
+            <br />
+            Math version:{" "}
+            {selected.mathVersion || selected.result.mathVersion || "legacy"}
+          </p>
+        </div>
+      ) : (
+        <div className="lemonza-history-list">
+          {rounds.length ? (
+            rounds.map((round) => (
+              <button key={round.id} onClick={() => setSelected(round)}>
+                <span>₤</span>
+                <div>
+                  <strong>Ставка {formatLira(round.chargedAmount)}</strong>
+                  <small>
+                    {new Date(round.createdAt).toLocaleString("ru-RU")}
+                  </small>
+                </div>
+                <b className={round.totalWin > 0 ? "is-win" : ""}>
+                  {round.totalWin > 0 ? `+${formatLira(round.totalWin)}` : "0"}
+                </b>
+              </button>
+            ))
+          ) : (
+            <p className="py-8 text-center text-[#7d847e]">
+              История пока пуста.
+            </p>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function Modal({
+  title,
+  eyebrow,
+  onClose,
+  children,
+  variant = "default",
+}: {
+  title: string;
+  eyebrow?: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  variant?: "default" | "slot" | "flush";
+}) {
+  const dialogRef = useRef<HTMLElement>(null),
+    titleId = useId();
+  useAccessibleDialog(dialogRef, onClose);
+  return (
+    <div
+      className="lemonza-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <section
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={`lemonza-modal lemonza-modal-${variant}`}
+      >
+        {variant !== "flush" && (
+          <header className="lemonza-modal-header">
+            <div>
+              {eyebrow && <small>{eyebrow}</small>}
+              <h2 id={titleId}>{title}</h2>
+            </div>
+            <button aria-label="Закрыть" onClick={onClose}>
+              ×
+            </button>
+          </header>
+        )}
+        {variant === "flush" && (
+          <>
+            <h2 id={titleId} className="sr-only">
+              {title || "Покупка Festa Bonus"}
+            </h2>
+            <button
+              className="lemonza-modal-floating-close"
+              aria-label="Закрыть"
+              onClick={onClose}
+            >
+              ×
+            </button>
+          </>
+        )}
+        <div className="lemonza-modal-scroll">{children}</div>
+      </section>
+    </div>
+  );
+}
+function RoundSummary({ round }: { round: SlotRound }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="rounded-xl bg-[#174b38]/6 p-3">
+        <small>Стоимость · {round.mode}</small>
+        <strong className="block">{formatLira(round.chargedAmount)}</strong>
+      </div>
+      <div className="rounded-xl bg-[#f2cf55]/16 p-3">
+        <small>Общий выигрыш</small>
+        <strong className="block">{formatLira(round.totalWin)}</strong>
+      </div>
+      <div className="rounded-xl bg-[#174b38]/6 p-3">
+        <small>Обычная игра</small>
+        <strong className="block">
+          {formatLira(round.baseWin + round.scatterWin)}
+        </strong>
+      </div>
+      <div className="rounded-xl bg-[#174b38]/6 p-3">
+        <small>Бонус</small>
+        <strong className="block">
+          {formatLira(round.bonusWin)} · max {round.maxMultiplier}X
+        </strong>
+      </div>
+      <p className="col-span-2 break-all text-[.65rem] text-[#858a84]">
+        Round ID: {round.id} · math: {round.mathVersion}
+      </p>
+    </div>
+  );
+}
+function BonusBuyOffer({
+  stake,
+  onClose,
+  onConfirm,
+}: {
+  stake: number;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const price = stake * LEMONZA_BONUS_BUY_COST_X;
+  return (
+    <div className="lemonza-bonus-offer">
+      <div className="lemonza-bonus-offer-hero">
+        <span className="lemonza-offer-lemon">🍋</span>
+        <p>Edizione matrimonio</p>
+        <strong>10 GIRI GRATIS</strong>
+        <small>Гарантированная встреча с AMORE</small>
+        <div className="lemonza-offer-scatters" aria-hidden="true">
+          <i>♥</i>
+          <i>♥</i>
+          <i>♥</i>
+          <i>♥</i>
+        </div>
+      </div>
+      <div className="lemonza-offer-price">
+        <span>Стоимость бонуса</span>
+        <strong>{formatLira(price)}</strong>
+        <small>
+          {LEMONZA_BONUS_BUY_COST_X}X базовой ставки · только свадебные лиры
+        </small>
+      </div>
+      <div className="lemonza-offer-perks">
+        <span>
+          <b>AMORE</b>
+          <small>Бонусный trigger-spin</small>
+        </span>
+        <span>
+          <b>10 FS</b>
+          <small>Стартовый пакет</small>
+        </span>
+        <span>
+          <b>до 100</b>
+          <small>С учётом retrigger</small>
+        </span>
+      </div>
+      <p className="lemonza-offer-warning">
+        Покупка запускается сразу и не отменяется после подтверждения.
+      </p>
+      <div className="lemonza-bonus-buy-actions">
+        <button className="lemonza-offer-cancel" onClick={onClose}>
+          Не сейчас
+        </button>
+        <button className="lemonza-offer-confirm" onClick={onConfirm}>
+          <span>Начать бонус</span>
+          <strong>{formatLira(price)}</strong>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function SweetLemonzaGame({
+  initialState,
+}: {
+  initialState: LemonzaState;
+}) {
+  const [balance, setBalance] = useState(initialState.balance),
+    [history, setHistory] = useState(initialState.history),
+    [stake, setStake] = useState(initialState.settings.allowedBets[0]);
+  const [muted, setMuted] = useState(false),
+    [turbo, setTurbo] = useState(false),
+    [lemonBoost, setLemonBoost] = useState(false),
+    [rulesOpen, setRulesOpen] = useState(false),
+    [historyOpen, setHistoryOpen] = useState(false),
+    [bonusBuyOpen, setBonusBuyOpen] = useState(false),
+    [error, setError] = useState(""),
+    [devTest, setDevTest] = useState<LemonzaDevTest | null>(null),
+    [devBonusIntro, setDevBonusIntro] = useState(false),
+    [recoverableRound, setRecoverableRound] = useState<SlotRound>();
+  const allowedBets = initialState.settings.allowedBets,
+    reducedMotion = useReducedMotion(),
+    pendingRequest = useRef<
+      | {
+          stake: number;
+          mode: "STANDARD" | "LEMON_BOOST" | "BONUS_BUY";
+          idempotencyKey: string;
+        }
+      | undefined
+    >(undefined),
+    recoveringRoundId = useRef<string | undefined>(undefined),
+    [soundManager] = useState(() => new LemonzaSoundManager());
+  useEffect(() => {
+    soundManager.setMuted(muted);
+  }, [muted, soundManager]);
+  useEffect(() => () => soundManager.dispose(), [soundManager]);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem("lemonza-stake"));
+    if (allowedBets.includes(saved))
+      requestAnimationFrame(() => setStake(saved));
+  }, [allowedBets]);
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("wedbet:balance", { detail: balance }),
+    );
+  }, [balance]);
+  const playSound = useCallback(
+    (event: SoundEvent, pitch?: number) => soundManager.play(event, pitch),
+    [soundManager],
+  );
+  const completeRound = useCallback(
+    (round: SlotRound) => {
+      const recovered = recoveringRoundId.current === round.id;
+      recoveringRoundId.current = undefined;
+      if (!recovered) setBalance(round.balanceAfter);
+      setHistory((items) =>
+        [round, ...items.filter((item) => item.id !== round.id)].slice(0, 20),
+      );
+      pendingRequest.current = undefined;
+      clearRoundPresentation(localStorage, round.gameId, initialState.userId);
+    },
+    [initialState.userId],
+  );
+  const playback = useRoundPlayback({
+    turbo,
+    reducedMotion,
+    onSound: playSound,
+    onComplete: completeRound,
+  });
+  const { view } = playback,
+    busy = !(["idle", "round-complete"] as string[]).includes(view.state),
+    requesting = view.state === "requesting-spin";
+  const interactionLocked =
+    busy || devTest !== null || Boolean(recoverableRound);
+  const runDevTest = useCallback(
+    (test: LemonzaDevTest) => {
+      if (!IS_DEVELOPMENT || busy || devTest !== null || recoverableRound)
+        return;
+      setBonusBuyOpen(false);
+      setError("");
+      setDevBonusIntro(false);
+      setDevTest(test);
+      playSound(test === "bonus" ? "symbols-drop" : "big-win");
+    },
+    [busy, devTest, playSound, recoverableRound],
+  );
+  useEffect(() => {
+    let active = true;
+    const round = loadRoundPresentation<SlotRound>(localStorage, {
+      gameId: "sweet-lemonza",
+      userId: initialState.userId,
+      availableRoundIds: new Set(initialState.history.map((item) => item.id)),
+    });
+    if (round)
+      queueMicrotask(() => {
+        if (active) setRecoverableRound(round);
+      });
+    return () => {
+      active = false;
+    };
+  }, [initialState.history, initialState.userId]);
+  useEffect(() => {
+    if (!IS_DEVELOPMENT || devTest !== "bonus") return;
+    const timer = window.setTimeout(
+      () => {
+        playSound("bonus-trigger");
+        setDevBonusIntro(true);
+      },
+      reducedMotion ? 80 : 1100,
+    );
+    return () => window.clearTimeout(timer);
+  }, [devTest, playSound, reducedMotion]);
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    (
+      window as typeof window & { __LEMONZA_DEBUG__?: unknown }
+    ).__LEMONZA_DEBUG__ = {
+      animationState: view.state,
+      activeAnimations: busy ? 1 : 0,
+      activeParticles: view.activeParticles,
+      currentCascade: view.cascadeIndex,
+      turboMode: turbo,
+      lastFrameDuration: 0,
+    };
+  }, [view.state, view.activeParticles, view.cascadeIndex, busy, turbo]);
+  async function spin(
+    retry = false,
+    requestedMode?: "STANDARD" | "LEMON_BOOST" | "BONUS_BUY",
+  ) {
+    if (devTest !== null) {
+      setError("Завершите тест анимации перед настоящим Spin.");
+      return;
+    }
+    if (recoverableRound) {
+      setError("Сначала завершите показ сохранённого раунда.");
+      return;
+    }
+    if (busy) {
+      if (playback.canSkip) playback.skip();
+      return;
+    }
+    if (!navigator.onLine) {
+      setError(
+        "Spin требует соединения с сервером. Offline-вращения отключены.",
+      );
+      return;
+    }
+    if (!initialState.settings.enabled || !initialState.settings.spinsEnabled) {
+      setError("Игра временно закрыта крупье.");
+      return;
+    }
+    const mode = requestedMode ?? (lemonBoost ? "LEMON_BOOST" : "STANDARD"),
+      price =
+        mode === "BONUS_BUY"
+          ? stake * LEMONZA_BONUS_BUY_COST_X
+          : mode === "LEMON_BOOST"
+            ? stake * 1.25
+            : stake;
+    if (balance < price) {
+      setError("Недостаточно свадебных лир для этой ставки.");
+      return;
+    }
+    await soundManager.unlock();
+    playSound("spin-press");
+    setError("");
+    playback.requesting();
+    const request =
+      retry && pendingRequest.current
+        ? pendingRequest.current
+        : { stake, mode, idempotencyKey: createClientRequestId() };
+    pendingRequest.current = request;
+    try {
+      const response = await fetch("/api/slots/sweet-lemonza/spin", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ gameId: LEMONZA_GAME.id, ...request }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error);
+      const round = body.round as SlotRound;
+      saveRoundPresentation(localStorage, round);
+      setBalance(round.balanceBefore - round.chargedAmount);
+      await playback.start(round, gridSymbols);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось выполнить Spin",
+      );
+      playback.reset();
+    }
+  }
+  function changeStake(direction: number) {
+    const index = Math.max(0, allowedBets.indexOf(stake)),
+      next =
+        allowedBets[
+          Math.max(0, Math.min(allowedBets.length - 1, index + direction))
+        ];
+    setStake(next);
+    localStorage.setItem("lemonza-stake", String(next));
+  }
+  const devBonusActive = IS_DEVELOPMENT && devTest === "bonus",
+    gridSymbols = devBonusActive
+      ? displayGrid(devBonusGrid, devBonusScatterIds)
+      : view.symbols.length
+        ? view.symbols
+        : displayGrid(previewGrid, new Set()),
+    gridState = devBonusActive ? "initial-drop" : view.state,
+    bonusWin = view.round?.bonusWin ?? 0,
+    spinCost = lemonBoost ? stake * 1.25 : stake,
+    multiplierActive = [
+      "revealing-multipliers",
+      "collecting-multiplier",
+      "applying-multipliers",
+    ].includes(view.state),
+    devWinX = devTest ? LEMONZA_DEV_WIN_X[devTest] : undefined;
+  return (
+    <div
+      className={`lemonza-screen ${view.bonusMode ? "is-bonus-mode" : ""} ${requesting ? "is-requesting" : ""} ${busy ? "is-playing" : ""} ${turbo ? "is-turbo" : ""} ${view.fastForwardSpin ? "is-skip-speed" : ""} ${reducedMotion ? "is-reduced-motion" : ""}`}
+    >
+      <div className="lemonza-background" />
+      <div className="lemonza-water" />
+      <div className="lemonza-leaves" />
+      <div className="lemonza-beach-scene" aria-hidden="true">
+        <span className="lemonza-umbrella lemonza-umbrella-left">
+          <i />
+        </span>
+        <span className="lemonza-lounger" />
+        <span className="lemonza-umbrella lemonza-umbrella-right">
+          <i />
+        </span>
+        <span className="lemonza-beach-ball" />
+        <span className="lemonza-towel" />
+      </div>
+      <header className="relative z-40 flex items-center justify-between gap-2 px-3 pb-2 pt-[max(.65rem,env(safe-area-inset-top))]">
+        <Link
+          href="/slots"
+          aria-label="Назад к слотам"
+          className="lemonza-round-button"
+        >
+          <LemonzaTopIcon name="back" />
+        </Link>
+        <div className="rounded-full bg-[#174b38]/90 px-3 py-2 text-sm font-black text-white shadow">
+          <span className="mr-1 text-[#f2cf55]">₤</span>
+          {balance.toLocaleString("ru-RU")}
+        </div>
+        <div className="flex gap-1.5">
+          <LemonzaDevMenu disabled={interactionLocked} onSelect={runDevTest} />
+          <button
+            className="lemonza-round-button"
+            aria-label={muted ? "Включить звук" : "Выключить звук"}
+            onClick={() => setMuted((value) => !value)}
+          >
+            <LemonzaTopIcon name="sound" muted={muted} />
+          </button>
+          <button
+            className="lemonza-round-button"
+            aria-label="Правила"
+            onClick={() => setRulesOpen(true)}
+          >
+            <LemonzaTopIcon name="rules" />
+          </button>
+          <button
+            className="lemonza-round-button"
+            aria-label="История"
+            onClick={() => setHistoryOpen(true)}
+          >
+            <LemonzaTopIcon name="history" />
+          </button>
+        </div>
+      </header>
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-2">
+        <div className="mb-1 text-center">
+          <h1 className="serif rotate-[-2deg] text-3xl font-black leading-none text-white [text-shadow:0_2px_0_#246149,0_4px_10px_rgba(0,0,0,.25)]">
+            Sweet <span className="text-[#f5d84d]">Lemonza</span>
+          </h1>
+          <p className="mt-1 text-[.55rem] font-black uppercase tracking-[.28em] text-[#174b38]">
+            La Dolce Vita Spins{" "}
+            {view.bonusMode && (
+              <b className="ml-2 rounded-full bg-[#f5d84d] px-2 py-0.5">
+                BONUS
+              </b>
+            )}
+          </p>
+        </div>
+        {view.bonusMode && view.freeSpinNumber > 0 && (
+          <div className="lemonza-bonus-counters">
+            <div className="lemonza-free-counter">
+              БОНУС {view.freeSpinNumber}/{view.freeSpinTotal}
+            </div>
+            <BonusSpinCounter
+              win={view.spinWin}
+              baseWin={view.multiplierWin}
+              multiplier={view.multiplierTotal}
+              multiplierActive={multiplierActive}
+            />
+          </div>
+        )}
+        <div className="relative w-full max-w-[31rem] rounded-[1.25rem] border-[6px] border-[#fff4d6] bg-[#286f95] p-1.5 shadow-[0_12px_35px_rgba(15,58,54,.35),inset_0_0_0_3px_#d8a944]">
+          <PresentationErrorBoundary
+            resetKey={`${view.round?.id ?? "preview"}-${gridState}`}
+            onRecover={playback.recover}
+          >
+            <GameGrid
+              symbols={gridSymbols}
+              state={gridState}
+              cascadeIndex={view.cascadeIndex}
+              reducedMotion={reducedMotion}
+              shake={view.shake}
+              onParticleCount={playback.setActiveParticles}
+            />
+          </PresentationErrorBoundary>
+          <CascadeWinLabel
+            value={view.cascadeWin}
+            visible={
+              view.state === "showing-win-value" ||
+              view.state === "removing-symbols"
+            }
+          />
+          <ScatterOverlay
+            count={
+              devBonusActive && !devBonusIntro
+                ? 4
+                : view.state === "showing-scatter-result"
+                  ? view.scatterCount
+                  : 0
+            }
+            isFreeSpin={view.isFreeSpin}
+          />
+        </div>
+        <div className="mt-2 min-h-10 text-center" aria-live="assertive">
+          {view.displayWin > 0 && (
+            <strong className="text-xl font-black tracking-[-.02em] text-[#173f33] tabular-nums">
+              ВЫИГРЫШ · {formatLira(view.displayWin)}
+            </strong>
+          )}
+          {view.recoveryNotice && (
+            <p className="slot-recovery-notice">{view.recoveryNotice}</p>
+          )}
+          {recoverableRound && (
+            <div className="slot-resume-card">
+              <span>Есть завершённый раунд, показ которого прервался.</span>
+              <div>
+                <button
+                  onClick={() => {
+                    const round = recoverableRound;
+                    recoveringRoundId.current = round.id;
+                    setRecoverableRound(undefined);
+                    setError("");
+                    void playback.start(round, gridSymbols);
+                  }}
+                >
+                  Продолжить показ раунда
+                </button>
+                <button
+                  onClick={() => {
+                    const round = recoverableRound;
+                    recoveringRoundId.current = round.id;
+                    setRecoverableRound(undefined);
+                    setError("");
+                    playback.restoreFinal(round);
+                  }}
+                >
+                  Показать результат
+                </button>
+              </div>
+            </div>
+          )}
+          {error && (
+            <p className="rounded-lg bg-[#a84735] px-3 py-2 text-xs font-bold text-white">
+              {error}
+            </p>
+          )}
+        </div>
+      </main>
+      <footer className="lemonza-control-deck relative z-40 px-2 pb-[max(.4rem,env(safe-area-inset-bottom))] pt-1.5">
+        <div className="lemonza-control-grid mx-auto max-w-[32rem]">
+          <div className="lemonza-stake-control">
+            <button
+              aria-label="Уменьшить ставку"
+              disabled={interactionLocked || allowedBets.indexOf(stake) === 0}
+              onClick={() => changeStake(-1)}
+            >
+              −
+            </button>
+            <div>
+              <small>Ставка</small>
+              <strong>{formatLira(stake)}</strong>
+            </div>
+            <button
+              aria-label="Увеличить ставку"
+              disabled={
+                interactionLocked ||
+                allowedBets.indexOf(stake) === allowedBets.length - 1
+              }
+              onClick={() => changeStake(1)}
+            >
+              +
+            </button>
+          </div>
+          <div className="lemonza-spin-cluster">
+            <span className="lemonza-spin-mode lemonza-spin-mode-left">
+              <button
+                title="Turbo: скорость анимаций"
+                aria-label="Переключить Turbo"
+                aria-pressed={turbo}
+                disabled={interactionLocked}
+                onClick={() => setTurbo((value) => !value)}
+                className={turbo ? "is-active" : ""}
+              >
+                <span aria-hidden="true">⚡</span>
+              </button>
+              <small>Turbo</small>
+            </span>
+            <button
+              aria-label={
+                requesting
+                  ? "Spin выполняется"
+                  : playback.canSkip
+                    ? "Ускорить падение текущего Spin"
+                    : busy
+                      ? "Spin завершается"
+                      : "Spin"
+              }
+              onClick={() => void spin(Boolean(error))}
+              disabled={
+                devTest !== null ||
+                Boolean(recoverableRound) ||
+                requesting ||
+                (busy && !playback.canSkip)
+              }
+              className={`lemonza-spin-button ${requesting ? "is-loading" : ""} ${busy ? "is-busy" : ""}`}
+            >
+              <span>{playback.canSkip ? "SKIP" : "SPIN"}</span>
+              <small
+                className={playback.canSkip ? undefined : "lemonza-spin-cost"}
+              >
+                {playback.canSkip ? "ускорить" : formatLira(spinCost)}
+              </small>
+            </button>
+            <span className="lemonza-spin-mode lemonza-spin-mode-right">
+              <button
+                title="Lemon Boost: стоимость +25%"
+                aria-label="Переключить Lemon Boost"
+                disabled={
+                  interactionLocked || !initialState.settings.lemonBoostEnabled
+                }
+                aria-pressed={lemonBoost}
+                onClick={() => setLemonBoost((value) => !value)}
+                className={lemonBoost ? "is-active" : ""}
+              >
+                <LemonzaSymbolIcon
+                  cell={{ id: -7101, symbol: "SCATTER" }}
+                  className="lemonza-quick-amore"
+                />
+                <i>+25</i>
+              </button>
+              <small>Boost</small>
+            </span>
+          </div>
+          <button
+            title={`Купить 10 фриспинов за ${formatLira(stake * LEMONZA_BONUS_BUY_COST_X)}`}
+            aria-label={`Купить 10 фриспинов за ${formatLira(stake * LEMONZA_BONUS_BUY_COST_X)}`}
+            disabled={
+              interactionLocked || !initialState.settings.bonusBuyEnabled
+            }
+            onClick={() => setBonusBuyOpen(true)}
+            className="lemonza-buy-control"
+          >
+            <span className="lemonza-buy-medallion">
+              <LemonzaSymbolIcon
+                cell={{ id: -7102, symbol: "SCATTER" }}
+                className="lemonza-buy-amore"
+              />
+            </span>
+            <span className="lemonza-buy-copy">
+              <b>10 фриспинов</b>
+            </span>
+            <strong>{formatLira(stake * LEMONZA_BONUS_BUY_COST_X)}</strong>
+          </button>
+        </div>
+      </footer>
+      {view.state === "entering-bonus" && (
+        <BonusIntro
+          total={view.freeSpinTotal}
+          onContinue={playback.continuePhase}
+        />
+      )}{" "}
+      {view.state === "showing-big-win" &&
+        view.celebrationWin > 0 &&
+        view.round && (
+          <BigWinOverlay
+            win={view.celebrationWin}
+            stake={view.round.stake}
+            onContinue={playback.continuePhase}
+          />
+        )}{" "}
+      {view.state === "bonus-summary" && view.round && (
+        <BonusSummary
+          freeSpins={view.round.result.totalFreeSpinsPlayed}
+          win={bonusWin}
+          onContinue={playback.continuePhase}
+        />
+      )}{" "}
+      {IS_DEVELOPMENT && devWinX && (
+        <BigWinOverlay
+          win={stake * devWinX}
+          stake={stake}
+          onContinue={() => setDevTest(null)}
+        />
+      )}{" "}
+      {IS_DEVELOPMENT && devBonusActive && devBonusIntro && (
+        <BonusIntro
+          total={10}
+          onContinue={() => {
+            setDevBonusIntro(false);
+            setDevTest(null);
+          }}
+        />
+      )}
+      <AnimationStatus state={view.state} />
+      {rulesOpen && (
+        <LemonzaRules onClose={() => setRulesOpen(false)} stake={stake} />
+      )}{" "}
+      {historyOpen && (
+        <LemonzaHistory
+          rounds={history}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}{" "}
+      {bonusBuyOpen && (
+        <Modal title="" variant="flush" onClose={() => setBonusBuyOpen(false)}>
+          <BonusBuyOffer
+            stake={stake}
+            onClose={() => setBonusBuyOpen(false)}
+            onConfirm={() => {
+              setBonusBuyOpen(false);
+              void spin(false, "BONUS_BUY");
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
 }

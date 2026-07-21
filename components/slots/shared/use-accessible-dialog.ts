@@ -2,17 +2,26 @@
 
 import { useEffect, type RefObject } from "react";
 
-const FOCUSABLE = 'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-export function useAccessibleDialog<T extends HTMLElement>(dialogRef: RefObject<T | null>, onClose: () => void) {
+export function useAccessibleDialog<T extends HTMLElement>(
+  dialogRef: RefObject<T | null>,
+  onClose: () => void,
+) {
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const previousOverflow = document.body.style.overflow;
     const backdrop = dialog.parentElement;
     const root = backdrop?.parentElement;
-    const siblings = root ? [...root.children].filter((element) => element !== backdrop) : [];
+    const siblings = root
+      ? [...root.children].filter((element) => element !== backdrop)
+      : [];
     const previous = siblings.map((element) => ({
       element,
       inert: element.hasAttribute("inert"),
@@ -33,9 +42,15 @@ export function useAccessibleDialog<T extends HTMLElement>(dialogRef: RefObject<
         return;
       }
       if (event.key !== "Tab") return;
-      const focusable = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((element) => {
+      const focusable = [
+        ...dialog.querySelectorAll<HTMLElement>(FOCUSABLE),
+      ].filter((element) => {
         const style = getComputedStyle(element);
-        return !element.hidden && style.display !== "none" && style.visibility !== "hidden";
+        return (
+          !element.hidden &&
+          style.display !== "none" &&
+          style.visibility !== "hidden"
+        );
       });
       if (!focusable.length) {
         event.preventDefault();
@@ -44,7 +59,10 @@ export function useAccessibleDialog<T extends HTMLElement>(dialogRef: RefObject<
       }
       const first = focusable[0];
       const last = focusable.at(-1)!;
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+      if (
+        event.shiftKey &&
+        (document.activeElement === first || document.activeElement === dialog)
+      ) {
         event.preventDefault();
         last.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
@@ -62,7 +80,8 @@ export function useAccessibleDialog<T extends HTMLElement>(dialogRef: RefObject<
         if (ariaHidden === null) element.removeAttribute("aria-hidden");
         else element.setAttribute("aria-hidden", ariaHidden);
       });
-      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+      if (previousFocus?.isConnected)
+        previousFocus.focus({ preventScroll: true });
     };
   }, [dialogRef, onClose]);
 }

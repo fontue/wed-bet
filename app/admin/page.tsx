@@ -1,3 +1,86 @@
 import { formatLira, totalPool } from "@/domain/market";
-import { listEvents, listTransactions, listUsers } from "@/infrastructure/mock/store";
-export default function AdminDashboard() { const events = listEvents(); const users = listUsers(); const transactions = listTransactions(); const turnover = events.reduce((sum, event) => sum + totalPool(event.outcomes) - event.outcomes.reduce((s, o) => s + o.seedPool, 0), 0); const cards = [{ label: "Активные рынки", value: events.filter((e) => e.status === "OPEN").length, hint: "принимают ставки" }, { label: "Гости", value: users.filter((u) => u.role === "USER").length, hint: "созданы крупье" }, { label: "Оборот", value: formatLira(turnover), hint: "без стартовой ликвидности" }, { label: "Операции", value: transactions.length, hint: "в журнале" }]; return <div><p className="eyebrow">Buongiorno, крупье</p><h1 className="serif mt-1 text-3xl font-bold">Пульт свадебного рынка</h1><div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map((card) => <div className="card p-5" key={card.label}><span className="text-xs font-bold text-[#758078]">{card.label}</span><strong className="serif mt-2 block text-3xl">{card.value}</strong><small className="text-[#8a8e85]">{card.hint}</small></div>)}</div><div className="mt-7 grid gap-5 lg:grid-cols-2"><section className="card p-5"><h2 className="serif text-xl font-bold">Требуют внимания</h2><div className="mt-4 space-y-3">{events.filter((e) => e.status === "OPEN").slice(0, 4).map((event) => <div key={event.id} className="flex items-center gap-3 border-b border-[#174b38]/8 pb-3 last:border-0"><span className="text-xl">{event.emoji}</span><span className="min-w-0 flex-1 truncate text-sm font-bold">{event.title}</span><span className="rounded-full bg-[#3c805c]/10 px-2 py-1 text-[.6rem] font-extrabold uppercase text-[#2f6b4c]">открыто</span></div>)}</div></section><section className="card p-5"><h2 className="serif text-xl font-bold">Принципы кассы</h2><ul className="mt-4 space-y-3 text-sm leading-relaxed text-[#68776e]"><li>• Комиссии нет и не будет.</li><li>• Баланс меняется только через журнал операций.</li><li>• Расчёт события и бонусов идемпотентен.</li><li>• Итоговый коэффициент формируют финальные стаканы.</li></ul></section></div></div>; }
+import {
+  listEvents,
+  listTransactions,
+  listUsers,
+} from "@/infrastructure/mock/store";
+export default function AdminDashboard() {
+  const events = listEvents();
+  const users = listUsers();
+  const transactions = listTransactions();
+  const turnover = events.reduce(
+    (sum, event) =>
+      sum +
+      totalPool(event.outcomes) -
+      event.outcomes.reduce((s, o) => s + o.seedPool, 0),
+    0,
+  );
+  const cards = [
+    {
+      label: "Активные рынки",
+      value: events.filter((e) => e.status === "OPEN").length,
+      hint: "принимают ставки",
+    },
+    {
+      label: "Гости",
+      value: users.filter((u) => u.role === "USER").length,
+      hint: "созданы крупье",
+    },
+    {
+      label: "Оборот",
+      value: formatLira(turnover),
+      hint: "без стартовой ликвидности",
+    },
+    { label: "Операции", value: transactions.length, hint: "в журнале" },
+  ];
+  return (
+    <div>
+      <p className="eyebrow">Buongiorno, крупье</p>
+      <h1 className="serif mt-1 text-3xl font-bold">Пульт свадебного рынка</h1>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.map((card) => (
+          <div className="card p-5" key={card.label}>
+            <span className="text-xs font-bold text-[#758078]">
+              {card.label}
+            </span>
+            <strong className="serif mt-2 block text-3xl">{card.value}</strong>
+            <small className="text-[#8a8e85]">{card.hint}</small>
+          </div>
+        ))}
+      </div>
+      <div className="mt-7 grid gap-5 lg:grid-cols-2">
+        <section className="card p-5">
+          <h2 className="serif text-xl font-bold">Требуют внимания</h2>
+          <div className="mt-4 space-y-3">
+            {events
+              .filter((e) => e.status === "OPEN")
+              .slice(0, 4)
+              .map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-center gap-3 border-b border-[#174b38]/8 pb-3 last:border-0"
+                >
+                  <span className="text-xl">{event.emoji}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                    {event.title}
+                  </span>
+                  <span className="rounded-full bg-[#3c805c]/10 px-2 py-1 text-[.6rem] font-extrabold uppercase text-[#2f6b4c]">
+                    открыто
+                  </span>
+                </div>
+              ))}
+          </div>
+        </section>
+        <section className="card p-5">
+          <h2 className="serif text-xl font-bold">Принципы кассы</h2>
+          <ul className="mt-4 space-y-3 text-sm leading-relaxed text-[#68776e]">
+            <li>• Комиссии нет и не будет.</li>
+            <li>• Баланс меняется только через журнал операций.</li>
+            <li>• Расчёт события и бонусов идемпотентен.</li>
+            <li>• Итоговый коэффициент формируют финальные стаканы.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  );
+}
